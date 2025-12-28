@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function DashboardLayout({
   children,
@@ -13,6 +13,7 @@ export default function DashboardLayout({
 }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // 🔐 Protect dashboard
   useEffect(() => {
@@ -32,10 +33,12 @@ export default function DashboardLayout({
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <Sidebar />
+    <div className="flex min-h-screen bg-gray-100 relative">
+      {/* Sidebar */}
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
       <div className="flex-1 flex flex-col">
-        <Header />
+        <Header onMenuClick={() => setIsSidebarOpen(true)} />
         <main className="p-6">{children}</main>
       </div>
     </div>

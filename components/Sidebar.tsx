@@ -33,6 +33,10 @@ interface UserProfile {
   [key: string]: any;
 }
 
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 interface NavSubItem {
   name: string;
   href: string;
@@ -60,7 +64,7 @@ function ProfileModal({
   user,
   isOpen,
   onClose,
-  onLogout
+  onLogout,
 }: {
   user: UserProfile | null;
   isOpen: boolean;
@@ -95,11 +99,8 @@ function ProfileModal({
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0" 
-        onClick={onClose}
-      />
-      
+      <div className="absolute inset-0" onClick={onClose} />
+
       <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl w-full max-w-lg border border-gray-700 shadow-2xl overflow-hidden z-10">
         <div className="p-6 border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900">
           <div className="flex items-center justify-between">
@@ -110,8 +111,12 @@ function ProfileModal({
                 </span>
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Profile Details</h2>
-                <p className="text-gray-400 text-sm">View and manage your account</p>
+                <h2 className="text-xl font-bold text-white">
+                  Profile Details
+                </h2>
+                <p className="text-gray-400 text-sm">
+                  View and manage your account
+                </p>
               </div>
             </div>
             <button
@@ -131,35 +136,35 @@ function ProfileModal({
                 {user.name || "Not provided"}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <p className="text-gray-400 text-sm">Email Address</p>
               <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
                 {user.email || "Not provided"}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <p className="text-gray-400 text-sm">User ID</p>
               <div className="text-white font-mono text-sm p-3 bg-gray-800/50 rounded-lg border border-gray-700 truncate">
                 {user._id || "N/A"}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <p className="text-gray-400 text-sm">Role</p>
               <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
                 {user.role || "User"}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <p className="text-gray-400 text-sm">Account Created</p>
               <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
                 {formatDate(user.createdAt)}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <p className="text-gray-400 text-sm">Last Updated</p>
               <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
@@ -182,20 +187,31 @@ function ProfileModal({
             {user.addresses && user.addresses.length > 0 ? (
               <div className="space-y-3">
                 {user.addresses.map((address: any, index: number) => (
-                  <div key={index} className="p-3 bg-gray-800/30 rounded-lg border border-gray-700">
-                    <p className="text-white">{address.street || "No street"}, {address.city || "No city"}</p>
+                  <div
+                    key={index}
+                    className="p-3 bg-gray-800/30 rounded-lg border border-gray-700"
+                  >
+                    <p className="text-white">
+                      {address.street || "No street"},{" "}
+                      {address.city || "No city"}
+                    </p>
                     <p className="text-gray-400 text-sm">
-                      {address.state || "No state"}, {address.zipCode || "No zip"}
+                      {address.state || "No state"},{" "}
+                      {address.zipCode || "No zip"}
                     </p>
                     {address.country && (
-                      <p className="text-gray-400 text-xs mt-1">{address.country}</p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        {address.country}
+                      </p>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
               <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700">
-                <p className="text-gray-400 text-center">No addresses added yet</p>
+                <p className="text-gray-400 text-center">
+                  No addresses added yet
+                </p>
               </div>
             )}
           </div>
@@ -207,7 +223,7 @@ function ProfileModal({
             >
               <FiX /> Close
             </button>
-            
+
             <button
               onClick={() => {
                 onLogout();
@@ -222,7 +238,10 @@ function ProfileModal({
 
         <div className="p-4 border-t border-gray-700 bg-gray-900/50 text-center">
           <p className="text-gray-500 text-sm">
-            User ID: <span className="text-gray-400 font-mono">{user._id?.slice(0, 12)}...</span>
+            User ID:{" "}
+            <span className="text-gray-400 font-mono">
+              {user._id?.slice(0, 12)}...
+            </span>
           </p>
         </div>
       </div>
@@ -230,13 +249,12 @@ function ProfileModal({
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [openSubDropdown, setOpenSubDropdown] = useState<string | null>(null);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -393,21 +411,21 @@ export default function Sidebar() {
 
   const isActive = (item: NavItem): boolean => {
     if (pathname === item.href) return true;
-    
+
     if (item.submenu) {
-      const hasActiveSubmenu = item.submenu.some(sub => {
+      const hasActiveSubmenu = item.submenu.some((sub) => {
         if (pathname === sub.href) return true;
-        
+
         if (sub.submenu) {
-          return sub.submenu.some(child => pathname === child.href);
+          return sub.submenu.some((child) => pathname === child.href);
         }
-        
+
         return false;
       });
-      
+
       if (hasActiveSubmenu) return true;
     }
-    
+
     return false;
   };
 
@@ -440,16 +458,15 @@ export default function Sidebar() {
       await fetchData("/auth/logout", {
         method: "POST",
       });
-      
+
       localStorage.removeItem("token");
       localStorage.removeItem("authToken");
       localStorage.removeItem("user");
-      
+
       setAuthToken(null);
       setUser(null);
       setShowProfileModal(false);
       router.push("/login");
-      
     } catch (error) {
       console.error("Logout error:", error);
       localStorage.clear();
@@ -463,18 +480,10 @@ export default function Sidebar() {
 
   const handleProfileClick = () => {
     setShowProfileModal(true);
-    setIsMobileOpen(false);
   };
 
   return (
     <>
-      <button
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg shadow-lg"
-      >
-        {isMobileOpen ? <FiX size={24} /> : <FiMenu size={24} />}
-      </button>
-
       <aside
         className={`
           bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900
@@ -482,16 +491,15 @@ export default function Sidebar() {
           border-r border-gray-700
           fixed lg:static z-30
           ${isCollapsed ? "w-20" : "w-64"}
-          ${
-            isMobileOpen
-              ? "translate-x-0"
-              : "-translate-x-full lg:translate-x-0"
-          }
+        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+
+
           flex flex-col
         `}
       >
-        <div className="p-5 border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900">
-          <div className="flex items-center justify-between">
+        <div className="md:py-5 p-0 md:p-5 py-5 pl-2 mt-10 md:mt-0 flex items-center justify-between border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900 pt-12 mb-4">
+         
+          <div className="flex items-center justify-between md:justify-start flex-1 gap-4">
             {!isCollapsed && (
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
@@ -522,6 +530,12 @@ export default function Sidebar() {
               )}
             </button>
           </div>
+           <button
+            onClick={onClose}
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white transition"
+          >
+            <FiX size={22} />
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3 custom-scrollbar">
@@ -579,7 +593,8 @@ export default function Sidebar() {
                     {openDropdown === item.name && !isCollapsed && (
                       <ul className="ml-6 mt-1 space-y-1 border-l border-gray-700 pl-3">
                         {item.submenu.map((sub) => {
-                          const hasChild = sub.submenu && sub.submenu.length > 0;
+                          const hasChild =
+                            sub.submenu && sub.submenu.length > 0;
 
                           return (
                             <li key={sub.name}>
@@ -587,7 +602,9 @@ export default function Sidebar() {
                                 onClick={() =>
                                   hasChild
                                     ? setOpenSubDropdown(
-                                        openSubDropdown === sub.name ? null : sub.name
+                                        openSubDropdown === sub.name
+                                          ? null
+                                          : sub.name
                                       )
                                     : router.push(sub.href)
                                 }
@@ -600,13 +617,12 @@ export default function Sidebar() {
                                   {sub.name}
                                 </span>
 
-                                {hasChild && (
-                                  openSubDropdown === sub.name ? (
+                                {hasChild &&
+                                  (openSubDropdown === sub.name ? (
                                     <FiChevronDown size={14} />
                                   ) : (
                                     <FiChevronRight size={14} />
-                                  )
-                                )}
+                                  ))}
                               </button>
 
                               {hasChild && openSubDropdown === sub.name && (
@@ -615,7 +631,7 @@ export default function Sidebar() {
                                     <li key={child.name}>
                                       <Link
                                         href={child.href}
-                                        onClick={() => setIsMobileOpen(false)}
+                                        onClick={onClose}
                                         className={`block px-3 py-2 rounded-md text-xs transition-all
                                           ${
                                             pathname === child.href
@@ -642,7 +658,7 @@ export default function Sidebar() {
                 <li key={item.name}>
                   <Link
                     href={item.href}
-                    onClick={() => setIsMobileOpen(false)}
+                    onClick={onClose}
                     className={`
                       flex items-center gap-3 px-3 py-3 rounded-xl
                       transition-all duration-200 group
@@ -727,10 +743,10 @@ export default function Sidebar() {
         onLogout={handleLogout}
       />
 
-      {isMobileOpen && (
+      {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={() => setIsMobileOpen(false)}
+          onClick={onClose}
         />
       )}
 

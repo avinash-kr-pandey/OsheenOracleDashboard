@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { fetchData } from '@/utils/api';
+import { FiMenu } from "react-icons/fi";
 
 interface UserData {
   _id: string;
@@ -21,7 +22,11 @@ interface UserData {
   updatedAt: string;
 }
 
-const Header = () => {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+const Header = ({ onMenuClick }: HeaderProps) => {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -53,7 +58,8 @@ const Header = () => {
       // If unauthorized, redirect to login
       if (error?.response?.status === 401) {
         localStorage.clear();
-        router.push('/login');
+        window.location.replace("/login");
+
       }
       
       // Set default data if API fails
@@ -97,7 +103,8 @@ const Header = () => {
       sessionStorage.clear();
       
       // Redirect to login
-      router.push('/login');
+      window.location.replace("/login");
+
     }
   };
 
@@ -184,7 +191,14 @@ const Header = () => {
       <div className="h-16 px-6 flex items-center justify-between">
         
         {/* Left Section - Brand/Logo */}
-        <div className="flex items-center gap-4">
+       <div className="flex items-center gap-4">
+         <button
+    onClick={onMenuClick}
+    className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+  >
+    <FiMenu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+  </button>
+
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">OO</span>

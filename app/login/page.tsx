@@ -90,7 +90,8 @@ export default function LoginPage() {
         // Redirect to dashboard
         setTimeout(() => {
           if (isMounted.current) {
-            router.push("/dashboard");
+           window.location.replace("/dashboard");
+
           }
         }, 1000);
       } catch (err: any) {
