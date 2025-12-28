@@ -72,7 +72,11 @@ export default function AddProduct({
     setForm((prev) => ({
       ...prev,
       [name]:
-        name === "price" || name === "originalPrice" ? Number(value) : value,
+        name === "price" || name === "originalPrice"
+          ? value === ""
+            ? ""
+            : Number(value)
+          : value,
     }));
 
     if (name === "image") {
@@ -265,15 +269,18 @@ export default function AddProduct({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Selling Price <span className="text-red-500">*</span>
                         </label>
+
                         <div className="relative">
-                          <DollarSign className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                          <span className="absolute left-3 top-3.5 text-gray-400 font-medium">
+                            ₹
+                          </span>
                           <input
                             type="number"
                             name="price"
                             value={form.price}
                             onChange={handleChange}
                             placeholder="0.00"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             min={0}
                             step={0.01}
                             required
@@ -285,19 +292,23 @@ export default function AddProduct({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Original Price
                         </label>
+
                         <div className="relative">
-                          <DollarSign className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                          <span className="absolute left-3 top-3.5 text-gray-400 font-medium">
+                            ₹
+                          </span>
                           <input
                             type="number"
                             name="originalPrice"
                             value={form.originalPrice}
                             onChange={handleChange}
                             placeholder="0.00"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             min={0}
                             step={0.01}
                           />
                         </div>
+
                         <p className="mt-2 text-sm text-gray-500">
                           For discounted products. Leave empty to use selling
                           price.
