@@ -1,7 +1,7 @@
 // utils/api.ts
 import axios, { AxiosError, AxiosResponse } from "axios";
 
-const API_BASE_URL = "https://osheenoraclebackend-1.onrender.com/api";
+const API_BASE_URL = "https://osheenoraclebackend02.onrender.com/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -125,6 +125,116 @@ export const deleteData = async <T = unknown>(endpoint: string): Promise<T> => {
     console.error("DELETE Error:", err.response?.data || err.message);
     throw err;
   }
+};
+// utils/api.ts - Horoscope section
+
+/* =======================
+   HOROSCOPE ENDPOINTS
+   Based on your backend routes and actual schema
+======================= */
+
+// Complete Horoscope type matching your backend
+export interface Horoscope {
+  _id: string;
+  zodiacSign: string;
+  zodiacSignHindi: string;
+  rishiName: string;
+  rishiNameHindi: string;
+  date: string;
+  prediction: string;
+  predictionHindi: string;
+  timeFrame: string;
+  createdAt: string;
+  updatedAt: string;
+  __v?: number;
+  
+  // For backward compatibility - optional
+  sign?: string;
+}
+
+export interface HoroscopeResponse {
+  success?: boolean;
+  message?: string;
+  data?: Horoscope | Horoscope[];
+  horoscope?: Horoscope;
+  horoscopes?: Horoscope[];
+  error?: string;
+  status?: number;
+  statusCode?: number;
+  
+  // For when the response is directly a Horoscope object
+  _id?: string;
+  zodiacSign?: string;
+  zodiacSignHindi?: string;
+  rishiName?: string;
+  rishiNameHindi?: string;
+  date?: string;
+  prediction?: string;
+  predictionHindi?: string;
+  timeFrame?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
+}
+
+export interface CreateHoroscopeData {
+  zodiacSign: string;
+  zodiacSignHindi: string;
+  date: string;
+  prediction: string;
+  predictionHindi: string;
+  timeFrame: string;
+  rishiName: string;
+  rishiNameHindi: string;
+  
+  // Optional for backward compatibility
+  sign?: string;
+}
+
+export const horoscopeAPI = {
+  /**
+   * Add new horoscope prediction
+   * POST /api/horoscope
+   * @param horoscopeData - Complete horoscope data with Hindi fields
+   * @returns Promise with response
+   */
+  addHoroscope: (horoscopeData: CreateHoroscopeData): Promise<HoroscopeResponse> => {
+    console.log('📝 Adding horoscope:', horoscopeData);
+    return postData<HoroscopeResponse>("/horoscope", horoscopeData);
+  },
+
+  /**
+   * Get horoscope by zodiac sign
+   * GET /api/horoscope/{sign}
+   * @param sign - Zodiac sign name (English)
+   * @returns Promise with horoscope data
+   */
+  getHoroscopeBySign: (sign: string): Promise<HoroscopeResponse> => {
+    console.log('🔍 Fetching horoscope for sign:', sign);
+    return fetchData<HoroscopeResponse>(`/horoscope/${sign}`);
+  },
+
+  /**
+   * Get horoscope by sign and time frame
+   * GET /api/horoscope/{sign}/{time}
+   * @param sign - Zodiac sign name (English)
+   * @param time - Time frame (daily, weekly, monthly, yearly)
+   * @returns Promise with horoscope data
+   */
+  getHoroscopeBySignAndTime: (sign: string, time: string): Promise<HoroscopeResponse> => {
+    console.log('📅 Fetching horoscope for:', sign, time);
+    return fetchData<HoroscopeResponse>(`/horoscope/${sign}/${time}`);
+  },
+
+  /**
+   * Get all horoscopes (if this endpoint exists)
+   * GET /api/horoscope
+   * @returns Promise with all horoscopes
+   */
+  getAllHoroscopes: (): Promise<HoroscopeResponse> => {
+    console.log('📋 Fetching all horoscopes');
+    return fetchData<HoroscopeResponse>("/horoscope");
+  },
 };
 
 export default api;

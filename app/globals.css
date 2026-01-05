@@ -348,5 +348,9 @@ body {
   @apply bg-red-600 text-white px-3 py-1 rounded-md;
 }
 
+.font-hindi {
+  font-family: 'Noto Sans Devanagari', 'Mangal', 'Arial Unicode MS', sans-serif;
+}
+
 
 

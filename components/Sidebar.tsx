@@ -314,6 +314,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/dashboard/horoscope",
       icon: <FiCalendar />,
       color: "text-indigo-400",
+      submenu: [
+        { name: "Add Horoscope", href: "/dashboard/horoscope/add" },
+        { name: "View Horoscope", href: "/dashboard/horoscope/view" },
+      ],
     },
     {
       name: "Astrologer",
@@ -485,18 +489,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
       <aside
-        className={`
-          bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900
-          h-screen text-white transition-all duration-300 
-          border-r border-gray-700
-          fixed lg:static z-30
-          ${isCollapsed ? "w-20" : "w-64"}
-        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+  className={`
+    bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900
+    fixed top-0 left-0 h-screen
+    text-white transition-all duration-300
+    border-r border-gray-700 z-40
+    ${isCollapsed ? "w-20" : "w-64"}
+    ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+    flex flex-col
+  `}
+>
 
-
-          flex flex-col
-        `}
-      >
         <div className="md:py-5 p-0 md:p-5 py-5 pl-2 mt-10 md:mt-0 flex items-center justify-between border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900 pt-12 mb-4">
          
           <div className="flex items-center justify-between md:justify-start flex-1 gap-4">

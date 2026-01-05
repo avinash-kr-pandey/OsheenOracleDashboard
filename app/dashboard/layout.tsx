@@ -32,15 +32,17 @@ export default function DashboardLayout({
 
   if (!user) return null;
 
-  return (
-    <div className="flex min-h-screen bg-gray-100 relative">
-      {/* Sidebar */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+return (
+  <div className="min-h-screen bg-gray-100 relative">
+    {/* Sidebar */}
+    <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col">
-        <Header onMenuClick={() => setIsSidebarOpen(true)} />
-        <main className="p-6">{children}</main>
-      </div>
+    {/* Content */}
+    <div className="flex-1 flex flex-col md:ml-64">
+      <Header onMenuClick={() => setIsSidebarOpen(true)} />
+      <main className="p-6">{children}</main>
     </div>
-  );
+  </div>
+);
+
 }

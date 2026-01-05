@@ -2,26 +2,45 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiStar } from "react-icons/fi";
+import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiStar, FiArrowRight, FiKey, FiLogIn, FiUserPlus, FiArrowLeft } from "react-icons/fi";
 import { postData, setAuthToken } from "@/utils/api";
 import { Toaster, toast } from "react-hot-toast";
+
+type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
 
 export default function LoginPage() {
   const router = useRouter();
   const isMounted = useRef(true);
+  const [mode, setMode] = useState<AuthMode>('login');
   const [formData, setFormData] = useState({
+    name: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [resetToken, setResetToken] = useState<string | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMounted.current = false;
     };
+  }, []);
+
+  // Check for reset token in URL
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      setResetToken(token);
+      setMode('reset-password');
+    }
   }, []);
 
   // Check if user is already logged in
@@ -43,80 +62,256 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, [router]);
 
-  // Handle form submission
+  // Handle form submission based on mode
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
 
       if (loading) return;
 
-      // Basic validation
-      if (!formData.email.trim() || !formData.password.trim()) {
-        toast.error("Please fill in all fields");
-        return;
-      }
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        toast.error("Please enter a valid email address");
-        return;
-      }
-
-      setLoading(true);
-
-      try {
-        // Login API call
-        const response = await postData<{
-          token: string;
-          user: {
-            _id: string;
-            name: string;
-            email: string;
-            role: string;
-          };
-        }>("/auth/login", formData);
-
-        if (!isMounted.current) return;
-
-        // Save token to localStorage
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("user", JSON.stringify(response.user));
-
-        // Set token in axios headers
-        setAuthToken(response.token);
-
-        toast.success("Login successful! Redirecting...");
-
-        // Redirect to dashboard
-        setTimeout(() => {
-          if (isMounted.current) {
-           window.location.replace("/dashboard");
-
-          }
-        }, 1000);
-      } catch (err: any) {
-        if (!isMounted.current) return;
-
-        console.error("Login error:", err);
-
-        if (err.response?.status === 401) {
-          toast.error("Invalid email or password");
-        } else if (err.response?.status === 500) {
-          toast.error("Server error. Please try again later.");
-        } else if (!navigator.onLine) {
-          toast.error("No internet connection");
-        } else {
-          toast.error(
-            err.response?.data?.message || "Login failed. Please try again."
-          );
+      // Validation based on mode
+      if (mode === 'login') {
+        if (!formData.email.trim() || !formData.password.trim()) {
+          toast.error("Please fill in all fields");
+          return;
         }
-      } finally {
-        if (isMounted.current) {
-          setLoading(false);
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+          toast.error("Please enter a valid email address");
+          return;
+        }
+
+        setLoading(true);
+
+        try {
+          // Login API call
+          const response = await postData<{
+            token: string;
+            user: {
+              _id: string;
+              name: string;
+              email: string;
+              type: string;
+            };
+          }>("/auth/login", {
+            email: formData.email,
+            password: formData.password
+          });
+
+          if (!isMounted.current) return;
+
+          // Save token to localStorage
+          localStorage.setItem("token", response.token);
+          localStorage.setItem("user", JSON.stringify(response.user));
+
+          // Set token in axios headers
+          setAuthToken(response.token);
+
+          toast.success("Login successful! Redirecting...");
+
+          // Redirect to dashboard
+          setTimeout(() => {
+            if (isMounted.current) {
+              window.location.replace("/dashboard");
+            }
+          }, 1000);
+        } catch (err: any) {
+          if (!isMounted.current) return;
+
+          console.error("Login error:", err);
+
+          if (err.response?.status === 401) {
+            toast.error("Invalid email or password");
+          } else if (err.response?.status === 500) {
+            toast.error("Server error. Please try again later.");
+          } else if (!navigator.onLine) {
+            toast.error("No internet connection");
+          } else {
+            toast.error(
+              err.response?.data?.message || "Login failed. Please try again."
+            );
+          }
+        } finally {
+          if (isMounted.current) {
+            setLoading(false);
+          }
+        }
+      } 
+      
+      else if (mode === 'register') {
+        if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim() || !formData.confirmPassword.trim()) {
+          toast.error("Please fill in all fields");
+          return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          toast.error("Passwords do not match");
+          return;
+        }
+
+        if (formData.password.length < 6) {
+          toast.error("Password must be at least 6 characters long");
+          return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+          toast.error("Please enter a valid email address");
+          return;
+        }
+
+        setLoading(true);
+
+        try {
+          // Register API call
+          await postData("/auth/register", {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            type: "user"
+          });
+
+          if (!isMounted.current) return;
+
+          toast.success("Registration successful! Please login.");
+          setMode('login');
+          
+          // Clear password fields
+          setFormData(prev => ({
+            ...prev,
+            password: "",
+            confirmPassword: ""
+          }));
+        } catch (err: any) {
+          if (!isMounted.current) return;
+
+          console.error("Registration error:", err);
+
+          if (err.response?.status === 400) {
+            toast.error(err.response?.data?.message || "Registration failed");
+          } else if (err.response?.status === 500) {
+            toast.error("Server error. Please try again later.");
+          } else if (!navigator.onLine) {
+            toast.error("No internet connection");
+          } else {
+            toast.error("Registration failed. Please try again.");
+          }
+        } finally {
+          if (isMounted.current) {
+            setLoading(false);
+          }
+        }
+      } 
+      
+      else if (mode === 'forgot-password') {
+        if (!formData.email.trim()) {
+          toast.error("Please enter your email address");
+          return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+          toast.error("Please enter a valid email address");
+          return;
+        }
+
+        setLoading(true);
+
+        try {
+          // Forgot Password API call
+          await postData("/auth/forgot-password", {
+            email: formData.email
+          });
+
+          if (!isMounted.current) return;
+
+          toast.success("Password reset instructions sent to your email!");
+          setMode('login');
+          setFormData(prev => ({ ...prev, email: "" }));
+        } catch (err: any) {
+          if (!isMounted.current) return;
+
+          console.error("Forgot password error:", err);
+
+          if (err.response?.status === 404) {
+            toast.error("No account found with this email");
+          } else if (err.response?.status === 500) {
+            toast.error("Server error. Please try again later.");
+          } else if (!navigator.onLine) {
+            toast.error("No internet connection");
+          } else {
+            toast.error("Failed to send reset instructions. Please try again.");
+          }
+        } finally {
+          if (isMounted.current) {
+            setLoading(false);
+          }
+        }
+      } 
+      
+      else if (mode === 'reset-password' && resetToken) {
+        if (!formData.password.trim() || !formData.confirmPassword.trim()) {
+          toast.error("Please fill in all fields");
+          return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          toast.error("Passwords do not match");
+          return;
+        }
+
+        if (formData.password.length < 6) {
+          toast.error("Password must be at least 6 characters long");
+          return;
+        }
+
+        setLoading(true);
+
+        try {
+          // Reset Password API call
+          await postData(`/auth/reset-password/${resetToken}`, {
+            password: formData.password
+          });
+
+          if (!isMounted.current) return;
+
+          toast.success("Password reset successful! Please login.");
+          setMode('login');
+          
+          // Clear all fields
+          setFormData({
+            name: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+          });
+          setResetToken(null);
+          
+          // Remove token from URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (err: any) {
+          if (!isMounted.current) return;
+
+          console.error("Reset password error:", err);
+
+          if (err.response?.status === 400) {
+            toast.error("Invalid or expired reset token");
+          } else if (err.response?.status === 500) {
+            toast.error("Server error. Please try again later.");
+          } else if (!navigator.onLine) {
+            toast.error("No internet connection");
+          } else {
+            toast.error("Failed to reset password. Please try again.");
+          }
+        } finally {
+          if (isMounted.current) {
+            setLoading(false);
+          }
         }
       }
     },
-    [formData, loading, router]
+    [formData, loading, mode, resetToken]
   );
 
   // Handle input change
@@ -126,6 +321,17 @@ export default function LoginPage() {
       ...prev,
       [field]: value,
     }));
+  }, []);
+
+  // Clear form when switching modes
+  const handleModeChange = useCallback((newMode: AuthMode) => {
+    setMode(newMode);
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    });
   }, []);
 
   // Show loading while checking authentication
@@ -139,6 +345,26 @@ export default function LoginPage() {
       </div>
     );
   }
+
+  const getModeTitle = () => {
+    switch (mode) {
+      case 'login': return 'Welcome Back';
+      case 'register': return 'Create Account';
+      case 'forgot-password': return 'Reset Password';
+      case 'reset-password': return 'Set New Password';
+      default: return 'Welcome';
+    }
+  };
+
+  const getModeSubtitle = () => {
+    switch (mode) {
+      case 'login': return 'Sign in to your admin account';
+      case 'register': return 'Create a new admin account';
+      case 'forgot-password': return 'Enter your email to reset password';
+      case 'reset-password': return 'Enter your new password';
+      default: return '';
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
@@ -164,67 +390,150 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Login Form */}
+        {/* Auth Form */}
         <div className="bg-gray-800/40 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 shadow-2xl">
           <div className="mb-6 text-center">
-            <h2 className="text-xl font-semibold text-white">Welcome Back</h2>
-            <p className="text-gray-400 text-sm mt-1">
-              Sign in to your admin account
-            </p>
+            <h2 className="text-xl font-semibold text-white">{getModeTitle()}</h2>
+            <p className="text-gray-400 text-sm mt-1">{getModeSubtitle()}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Field */}
-            <div className="space-y-2">
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <FiMail className="text-blue-400/80 text-lg" />
+            {/* Name Field (Register only) */}
+            {mode === 'register' && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                    <FiUser className="text-blue-400/80 text-lg" />
+                  </div>
+                  <input
+                    type="text"
+                    required={mode === 'register'}
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 text-sm"
+                    placeholder="Enter your full name"
+                    disabled={loading}
+                    autoComplete="name"
+                  />
                 </div>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 text-sm"
-                  placeholder="Enter your email"
-                  disabled={loading}
-                  autoComplete="email"
-                />
               </div>
-            </div>
+            )}
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <FiLock className="text-blue-400/80 text-lg" />
+            {/* Email Field (All modes except reset-password) */}
+            {(mode === 'login' || mode === 'register' || mode === 'forgot-password') && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                    <FiMail className="text-blue-400/80 text-lg" />
+                  </div>
+                  <input
+                    type="email"
+                    required={mode === 'login' || mode === 'register' || mode === 'forgot-password'}
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 text-sm"
+                    placeholder="Enter your email"
+                    disabled={loading}
+                    autoComplete="email"
+                  />
                 </div>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  className="w-full pl-10 pr-12 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 text-sm"
-                  placeholder="Enter your password"
-                  disabled={loading}
-                  autoComplete="current-password"
-                />
+              </div>
+            )}
+
+            {/* Password Field (Login, Register, Reset-password) */}
+            {(mode === 'login' || mode === 'register' || mode === 'reset-password') && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                    <FiLock className="text-blue-400/80 text-lg" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required={mode === 'login' || mode === 'register' || mode === 'reset-password'}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    className="w-full pl-10 pr-12 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 text-sm"
+                    placeholder={mode === 'reset-password' ? "Enter new password" : "Enter your password"}
+                    disabled={loading}
+                    autoComplete={mode === 'reset-password' ? "new-password" : "current-password"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                    disabled={loading}
+                  >
+                    {showPassword ? (
+                      <FiEyeOff size={18} />
+                    ) : (
+                      <FiEye size={18} />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Confirm Password Field (Register & Reset-password) */}
+            {(mode === 'register' || mode === 'reset-password') && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                    <FiKey className="text-purple-400/80 text-lg" />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required={mode === 'register' || mode === 'reset-password'}
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                    className="w-full pl-10 pr-12 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 text-sm"
+                    placeholder="Confirm password"
+                    disabled={loading}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                    disabled={loading}
+                  >
+                    {showConfirmPassword ? (
+                      <FiEyeOff size={18} />
+                    ) : (
+                      <FiEye size={18} />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Forgot Password Link (Login mode only) */}
+            {mode === 'login' && (
+              <div className="text-right">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                  onClick={() => handleModeChange('forgot-password')}
+                  className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
                   disabled={loading}
                 >
-                  {showPassword ? (
-                    <FiEyeOff size={18} />
-                  ) : (
-                    <FiEye size={18} />
-                  )}
+                  Forgot password?
                 </button>
               </div>
-            </div>
+            )}
 
-     
+            {/* Back to Login Link (Forgot Password & Reset Password modes) */}
+            {(mode === 'forgot-password' || mode === 'reset-password') && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => handleModeChange('login')}
+                  className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center justify-center gap-1 mx-auto"
+                  disabled={loading}
+                >
+                  <FiArrowLeft size={14} />
+                  Back to login
+                </button>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
@@ -235,22 +544,52 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Signing in...
+                  {mode === 'login' && 'Signing in...'}
+                  {mode === 'register' && 'Creating account...'}
+                  {mode === 'forgot-password' && 'Sending reset link...'}
+                  {mode === 'reset-password' && 'Resetting password...'}
                 </>
               ) : (
                 <>
-                  Sign In
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
+                  {mode === 'login' && 'Sign In'}
+                  {mode === 'register' && 'Create Account'}
+                  {mode === 'forgot-password' && 'Send Reset Link'}
+                  {mode === 'reset-password' && 'Reset Password'}
+                  <FiArrowRight className="ml-1" />
                 </>
               )}
             </button>
 
-           
+            {/* Mode Switch Links */}
+            <div className="text-center pt-4 border-t border-gray-700/50">
+              {mode === 'login' ? (
+                <p className="text-gray-400 text-sm">
+                  Don't have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange('register')}
+                    className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                    disabled={loading}
+                  >
+                    Sign up
+                  </button>
+                </p>
+              ) : mode === 'register' ? (
+                <p className="text-gray-400 text-sm">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange('login')}
+                    className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                    disabled={loading}
+                  >
+                    Sign in
+                  </button>
+                </p>
+              ) : null}
+            </div>
           </form>
         </div>
-
 
         {/* Background Elements */}
         <div className="fixed inset-0 -z-10 overflow-hidden">
@@ -264,14 +603,16 @@ export default function LoginPage() {
       <Toaster
         position="top-center"
         toastOptions={{
-          duration: 3000,
+          duration: 4000,
           style: {
             background: "#1f2937",
             color: "#fff",
             border: "1px solid #374151",
             fontSize: '14px',
             maxWidth: '400px',
-            margin: '0 auto'
+            margin: '0 auto',
+            borderRadius: '0.75rem',
+            padding: '12px 16px'
           },
           success: {
             iconTheme: {
