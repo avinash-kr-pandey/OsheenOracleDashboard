@@ -422,6 +422,7 @@ const AddTestimonial = () => {
                   className="py-4 px-8 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-300"
                 >
                   View All Testimonials
+                  
                 </button>
               </motion.div>
             </form>
