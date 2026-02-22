@@ -15,6 +15,7 @@ import {
   Palette,
   Ruler,
 } from "lucide-react";
+import Image from "next/image";
 
 /* ======================
    TYPES
@@ -103,7 +104,9 @@ export default function AddProduct({
   onCancel,
 }: AddProductProps) {
   const [loading, setLoading] = useState<boolean>(false);
-  
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Initialize form with editProduct data or empty values
   const [form, setForm] = useState<ProductPayload>({
     name: editProduct?.name || "",
     price: editProduct?.price || 0,
@@ -118,150 +121,213 @@ export default function AddProduct({
   });
 
   const [imagePreview, setImagePreview] = useState<string>(
-    form.image || DEFAULT_IMAGE
+    form.image || DEFAULT_IMAGE,
   );
 
   const [tempColor, setTempColor] = useState<string>("");
   const [tempSize, setTempSize] = useState<string>("");
 
+  // Validation function
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!form.name.trim()) {
+      newErrors.name = "Product name is required";
+    } else if (form.name.trim().length < 3) {
+      newErrors.name = "Product name must be at least 3 characters";
+    }
+
+    if (form.price <= 0) {
+      newErrors.price = "Price must be greater than 0";
+    }
+
+    if (form.originalPrice < form.price) {
+      newErrors.originalPrice =
+        "Original price cannot be less than selling price";
+    }
+
+    if (!form.category) {
+      newErrors.category = "Category is required";
+    }
+
+    if (!form.description.trim()) {
+      newErrors.description = "Description is required";
+    } else if (form.description.trim().length < 20) {
+      newErrors.description = "Description must be at least 20 characters";
+    }
+
+    if (form.hasColorOptions && form.colors.length === 0) {
+      newErrors.colors =
+        "At least one color is required when color options are enabled";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value, type } = e.target;
 
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
-      setForm((prev) => ({
-        ...prev,
+      const updatedForm = {
+        ...form,
         [name]: checked,
-      }));
+      };
+
+      // If turning off color options, clear colors
+      if (name === "hasColorOptions" && !checked) {
+        updatedForm.colors = [];
+      }
+
+      setForm(updatedForm);
       return;
     }
 
-    setForm((prev) => ({
-      ...prev,
+    const updatedForm = {
+      ...form,
       [name]:
         name === "price" || name === "originalPrice"
           ? value === ""
             ? 0
             : Number(value)
           : value,
-    }));
+    };
+
+    setForm(updatedForm);
 
     if (name === "image") {
-      setImagePreview(value.trim() || DEFAULT_IMAGE);
+      const imageUrl = value.trim();
+      setImagePreview(imageUrl || DEFAULT_IMAGE);
     }
   };
 
   const handleAddColor = () => {
-    if (tempColor.trim() && !form.colors.includes(tempColor.trim())) {
+    if (tempColor.trim()) {
+      if (form.colors.includes(tempColor.trim())) {
+        setErrors((prev) => ({
+          ...prev,
+          colors: "Color already exists",
+        }));
+        return;
+      }
+
+      const updatedColors = [...form.colors, tempColor.trim()];
       setForm((prev) => ({
         ...prev,
-        colors: [...prev.colors, tempColor.trim()],
+        colors: updatedColors,
       }));
+
+      // Clear color error if any
+      if (errors.colors) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.colors;
+          return newErrors;
+        });
+      }
+
       setTempColor("");
     }
   };
 
   const handleRemoveColor = (colorToRemove: string) => {
+    const updatedColors = form.colors.filter(
+      (color) => color !== colorToRemove,
+    );
     setForm((prev) => ({
       ...prev,
-      colors: prev.colors.filter((color) => color !== colorToRemove),
+      colors: updatedColors,
     }));
   };
 
   const handleAddSize = () => {
     const sizeNum = parseInt(tempSize);
-    if (!isNaN(sizeNum) && !form.sizeOptions.includes(sizeNum)) {
+    if (!isNaN(sizeNum)) {
+      if (sizeNum <= 0) {
+        setErrors((prev) => ({
+          ...prev,
+          size: "Size must be greater than 0",
+        }));
+        return;
+      }
+
+      if (form.sizeOptions.includes(sizeNum)) {
+        setErrors((prev) => ({
+          ...prev,
+          size: "Size already exists",
+        }));
+        return;
+      }
+
+      const updatedSizes = [...form.sizeOptions, sizeNum].sort((a, b) => a - b);
       setForm((prev) => ({
         ...prev,
-        sizeOptions: [...prev.sizeOptions, sizeNum].sort((a, b) => a - b),
+        sizeOptions: updatedSizes,
       }));
+
       setTempSize("");
     }
   };
 
   const handleRemoveSize = (sizeToRemove: number) => {
+    const updatedSizes = form.sizeOptions.filter(
+      (size) => size !== sizeToRemove,
+    );
     setForm((prev) => ({
       ...prev,
-      sizeOptions: prev.sizeOptions.filter((size) => size !== sizeToRemove),
+      sizeOptions: updatedSizes,
     }));
   };
 
   const getColorHex = (colorName: string) => {
     const color = colorName.toLowerCase();
     switch (color) {
-      case 'white': return '#ffffff';
-      case 'black': return '#000000';
-      case 'red': return '#ff0000';
-      case 'blue': return '#0000ff';
-      case 'green': return '#008000';
-      case 'yellow': return '#ffff00';
-      case 'purple': return '#800080';
-      case 'pink': return '#ffc0cb';
-      case 'brown': return '#a52a2a';
-      case 'gray': return '#808080';
-      case 'orange': return '#ffa500';
-      case 'navy': return '#000080';
-      default: return color;
+      case "white":
+        return "#ffffff";
+      case "black":
+        return "#000000";
+      case "red":
+        return "#ff0000";
+      case "blue":
+        return "#0000ff";
+      case "green":
+        return "#008000";
+      case "yellow":
+        return "#ffff00";
+      case "purple":
+        return "#800080";
+      case "pink":
+        return "#ffc0cb";
+      case "brown":
+        return "#a52a2a";
+      case "gray":
+        return "#808080";
+      case "orange":
+        return "#ffa500";
+      case "navy":
+        return "#000080";
+      default:
+        return "#cccccc";
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    // Calculate discount percentage
-    const discount = form.originalPrice > form.price
-      ? Math.round(((form.originalPrice - form.price) / form.originalPrice) * 100) + "%"
-      : "0%";
-
-    const payload: ProductPayload = {
-      ...form,
-      originalPrice: form.originalPrice > 0 ? form.originalPrice : form.price,
-      image: form.image.trim() ? form.image : DEFAULT_IMAGE,
-      // Ensure arrays are properly formatted
-      colors: form.hasColorOptions ? form.colors : [],
-      sizeOptions: form.sizeOptions,
-    };
-
-    try {
-      setLoading(true);
-
-      if (editProduct?._id) {
-        await putData(`/products/${editProduct._id}`, payload);
-        toast.success("🎉 Product updated successfully!");
-      } else {
-        await postData("/products", payload);
-        toast.success("🎉 Product created successfully!");
-      }
-
-      if (!editProduct) {
-        setForm({
-          name: "",
-          price: 0,
-          originalPrice: 0,
-          image: "",
-          description: "",
-          category: "",
-          inStock: true,
-          hasColorOptions: false,
-          colors: [],
-          sizeOptions: [],
-        });
-        setImagePreview(DEFAULT_IMAGE);
-      }
-
-      if (onSuccess) onSuccess();
-    } catch (error) {
-      toast.error("❌ Something went wrong");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setForm({
+  // Reset form to initial state
+  const resetFormToInitial = () => {
+    const initialForm = {
       name: "",
       price: 0,
       originalPrice: 0,
@@ -272,11 +338,179 @@ export default function AddProduct({
       hasColorOptions: false,
       colors: [],
       sizeOptions: [],
-    });
+    };
+
+    setForm(initialForm);
     setImagePreview(DEFAULT_IMAGE);
     setTempColor("");
     setTempSize("");
-    if (onCancel) onCancel();
+    setErrors({});
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Validate form
+    if (!validateForm()) {
+      toast.error("❌ Please fix the errors before submitting");
+      return;
+    }
+
+    // Calculate discount percentage
+    const discount =
+      form.originalPrice > form.price
+        ? Math.round(
+            ((form.originalPrice - form.price) / form.originalPrice) * 100,
+          ) + "%"
+        : "0%";
+
+    // Prepare payload according to backend expectations
+    const payload: ProductPayload = {
+      name: form.name.trim(),
+      price: Number(form.price.toFixed(2)),
+      originalPrice:
+        form.originalPrice > 0
+          ? Number(form.originalPrice.toFixed(2))
+          : Number(form.price.toFixed(2)),
+      image: form.image.trim() ? form.image.trim() : DEFAULT_IMAGE,
+      description: form.description.trim(),
+      category: form.category,
+      inStock: form.inStock,
+      hasColorOptions: form.hasColorOptions,
+      colors: form.hasColorOptions ? form.colors.map((c) => c.trim()) : [],
+      sizeOptions: form.sizeOptions,
+    };
+
+    try {
+      setLoading(true);
+
+      if (editProduct?._id) {
+        await putData(`/products/${editProduct._id}`, payload);
+        toast.success("✅ Product updated successfully!", {
+          duration: 4000,
+          position: "top-center",
+          style: {
+            background: "#10B981",
+            color: "#fff",
+            fontWeight: "bold",
+            padding: "16px",
+            borderRadius: "8px",
+          },
+          icon: "🎉",
+        });
+      } else {
+        await postData("/products", payload);
+        toast.success("✅ Product created successfully!", {
+          duration: 4000,
+          position: "top-center",
+          style: {
+            background: "#10B981",
+            color: "#fff",
+            fontWeight: "bold",
+            padding: "16px",
+            borderRadius: "8px",
+          },
+          icon: "🎉",
+        });
+
+        // Reset form ONLY for new product
+        resetFormToInitial();
+
+        toast.success("✅ Form has been reset for new product!", {
+          duration: 3000,
+          position: "top-center",
+          icon: "🔄",
+          style: {
+            background: "#3B82F6",
+            color: "#fff",
+            padding: "12px",
+            borderRadius: "8px",
+          },
+        });
+      }
+
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess();
+        }, 500);
+      }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error("Product submission error:", error);
+
+      // Show specific error messages based on backend response
+      let errorMessage = "Failed to save product. Please try again";
+
+      if (
+        error.message?.includes("Validation Error") ||
+        error.message?.includes("required")
+      ) {
+        errorMessage = "❌ Validation Error: Please check all required fields";
+      } else if (error.message?.includes("already exists")) {
+        errorMessage = "❌ Product with this name already exists";
+      } else if (error.response?.status === 401) {
+        errorMessage = "❌ Session expired. Please login again";
+      } else if (error.response?.status === 403) {
+        errorMessage = "❌ You don't have permission to add products";
+      }
+
+      toast.error(errorMessage, {
+        duration: 4000,
+        position: "top-center",
+        style: {
+          background: "#EF4444",
+          color: "#fff",
+          fontWeight: "bold",
+          padding: "16px",
+          borderRadius: "8px",
+        },
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    if (editProduct?._id) {
+      // For edit mode, reset to original values
+      setForm({
+        name: editProduct.name || "",
+        price: editProduct.price || 0,
+        originalPrice: editProduct.originalPrice || 0,
+        image: editProduct.image || "",
+        description: editProduct.description || "",
+        category: editProduct.category || "",
+        inStock: editProduct.inStock !== undefined ? editProduct.inStock : true,
+        hasColorOptions: editProduct.hasColorOptions || false,
+        colors: editProduct.colors || [],
+        sizeOptions: editProduct.sizeOptions || [],
+      });
+      setImagePreview(editProduct.image || DEFAULT_IMAGE);
+    } else {
+      // For add mode, clear everything
+      resetFormToInitial();
+    }
+
+    setErrors({});
+
+    toast.success("Form reset successfully!", {
+      duration: 2000,
+      position: "top-center",
+      icon: "🔄",
+      style: {
+        background: "#3B82F6",
+        color: "#fff",
+        padding: "12px",
+        borderRadius: "8px",
+      },
+    });
+
+    if (onCancel) {
+      setTimeout(() => {
+        onCancel();
+      }, 300);
+    }
   };
 
   /* ======================
@@ -320,13 +554,15 @@ export default function AddProduct({
                     </div>
 
                     <div className="aspect-square rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-white mb-4">
-                      <img
+                      <Image
                         src={imagePreview}
                         alt="Preview"
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.currentTarget.src = DEFAULT_IMAGE;
                         }}
+                        width={300}
+                        height={300}
                       />
                     </div>
 
@@ -370,10 +606,17 @@ export default function AddProduct({
                             value={form.name}
                             onChange={handleChange}
                             placeholder="e.g., Men's Casual Sneakers"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                              errors.name ? "border-red-500" : "border-gray-300"
+                            }`}
                             required
                           />
                         </div>
+                        {errors.name && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors.name}
+                          </p>
+                        )}
                       </div>
 
                       <div className="grid md:grid-cols-2 gap-6">
@@ -387,7 +630,11 @@ export default function AddProduct({
                               name="category"
                               value={form.category}
                               onChange={handleChange}
-                              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white"
+                              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white ${
+                                errors.category
+                                  ? "border-red-500"
+                                  : "border-gray-300"
+                              }`}
                               required
                             >
                               <option value="">Select a category</option>
@@ -398,6 +645,11 @@ export default function AddProduct({
                               ))}
                             </select>
                           </div>
+                          {errors.category && (
+                            <p className="mt-2 text-sm text-red-600">
+                              {errors.category}
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between">
@@ -416,8 +668,10 @@ export default function AddProduct({
                                 />
                                 <span className="text-gray-700">In Stock</span>
                               </label>
-                              <div className={`px-3 py-1 rounded-full text-sm font-medium ${form.inStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                {form.inStock ? 'Available' : 'Out of Stock'}
+                              <div
+                                className={`px-3 py-1 rounded-full text-sm font-medium ${form.inStock ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                              >
+                                {form.inStock ? "Available" : "Out of Stock"}
                               </div>
                             </div>
                           </div>
@@ -459,9 +713,9 @@ export default function AddProduct({
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Selling Price <span className="text-red-500">*</span>
+                          Selling Price (₹){" "}
+                          <span className="text-red-500">*</span>
                         </label>
-
                         <div className="relative">
                           <span className="absolute left-3 top-3.5 text-gray-400 font-medium">
                             ₹
@@ -469,22 +723,30 @@ export default function AddProduct({
                           <input
                             type="number"
                             name="price"
-                            value={form.price}
+                            value={form.price || ""}
                             onChange={handleChange}
                             placeholder="0.00"
-                            className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                              errors.price
+                                ? "border-red-500"
+                                : "border-gray-300"
+                            }`}
                             min={0}
                             step={0.01}
                             required
                           />
                         </div>
+                        {errors.price && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors.price}
+                          </p>
+                        )}
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Original Price
+                          Original Price (₹)
                         </label>
-
                         <div className="relative">
                           <span className="absolute left-3 top-3.5 text-gray-400 font-medium">
                             ₹
@@ -492,17 +754,26 @@ export default function AddProduct({
                           <input
                             type="number"
                             name="originalPrice"
-                            value={form.originalPrice}
+                            value={form.originalPrice || ""}
                             onChange={handleChange}
                             placeholder="0.00"
-                            className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                              errors.originalPrice
+                                ? "border-red-500"
+                                : "border-gray-300"
+                            }`}
                             min={0}
                             step={0.01}
                           />
                         </div>
-
+                        {errors.originalPrice && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors.originalPrice}
+                          </p>
+                        )}
                         <p className="mt-2 text-sm text-gray-500">
-                          For discounted products. Leave empty to use selling price.
+                          For discounted products. Leave empty to use selling
+                          price.
                         </p>
                       </div>
                     </div>
@@ -516,14 +787,19 @@ export default function AddProduct({
                               You&rsquo;re offering:
                             </span>
                             <p className="text-sm text-gray-600 mt-1">
-                              {Math.round(((form.originalPrice - form.price) / form.originalPrice) * 100)}% discount
+                              {Math.round(
+                                ((form.originalPrice - form.price) /
+                                  form.originalPrice) *
+                                  100,
+                              )}
+                              % discount
                             </p>
                           </div>
                           <div className="text-right">
                             <span className="text-2xl font-bold text-green-600">
                               ₹
                               {(form.originalPrice - form.price).toLocaleString(
-                                "en-IN"
+                                "en-IN",
                               )}
                             </span>
                             <p className="text-sm text-gray-600">
@@ -563,7 +839,9 @@ export default function AddProduct({
                                   onChange={handleChange}
                                   className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
                                 />
-                                <span className="text-gray-700">Has multiple colors</span>
+                                <span className="text-gray-700">
+                                  Has multiple colors
+                                </span>
                               </label>
                             </div>
                           </div>
@@ -577,8 +855,15 @@ export default function AddProduct({
                                 value={tempColor}
                                 onChange={(e) => setTempColor(e.target.value)}
                                 placeholder="Add a color (e.g., Red)"
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddColor())}
+                                className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all ${
+                                  errors.colors
+                                    ? "border-red-500"
+                                    : "border-gray-300"
+                                }`}
+                                onKeyPress={(e) =>
+                                  e.key === "Enter" &&
+                                  (e.preventDefault(), handleAddColor())
+                                }
                               />
                               <button
                                 type="button"
@@ -588,23 +873,32 @@ export default function AddProduct({
                                 Add
                               </button>
                             </div>
+                            {errors.colors && (
+                              <p className="text-sm text-red-600">
+                                {errors.colors}
+                              </p>
+                            )}
 
                             {form.colors.length > 0 ? (
                               <div className="space-y-3">
-                                <p className="text-sm text-gray-600">Selected colors:</p>
+                                <p className="text-sm text-gray-600">
+                                  Selected colors:
+                                </p>
                                 <div className="flex flex-wrap gap-2">
                                   {form.colors.map((color) => (
                                     <div
                                       key={color}
                                       className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"
                                     >
-                                      <div 
+                                      <div
                                         className="w-4 h-4 rounded-full border border-gray-300"
-                                        style={{ 
-                                          backgroundColor: getColorHex(color)
+                                        style={{
+                                          backgroundColor: getColorHex(color),
                                         }}
                                       />
-                                      <span className="text-sm font-medium text-gray-700">{color}</span>
+                                      <span className="text-sm font-medium text-gray-700">
+                                        {color}
+                                      </span>
                                       <button
                                         type="button"
                                         onClick={() => handleRemoveColor(color)}
@@ -617,11 +911,15 @@ export default function AddProduct({
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-sm text-gray-500 italic">No colors added yet</p>
+                              <p className="text-sm text-gray-500 italic">
+                                No colors added yet
+                              </p>
                             )}
 
                             <div className="mt-4">
-                              <p className="text-sm text-gray-600 mb-2">Quick add common colors:</p>
+                              <p className="text-sm text-gray-600 mb-2">
+                                Quick add common colors:
+                              </p>
                               <div className="flex flex-wrap gap-2">
                                 {COMMON_COLORS.map((color) => (
                                   <button
@@ -629,16 +927,17 @@ export default function AddProduct({
                                     type="button"
                                     onClick={() => {
                                       if (!form.colors.includes(color)) {
-                                        setForm(prev => ({
+                                        setForm((prev) => ({
                                           ...prev,
-                                          colors: [...prev.colors, color]
+                                          colors: [...prev.colors, color],
                                         }));
                                       }
                                     }}
                                     disabled={form.colors.includes(color)}
-                                    className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${form.colors.includes(color)
-                                      ? 'bg-green-100 text-green-800 border-green-200 cursor-not-allowed'
-                                      : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                                    className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
+                                      form.colors.includes(color)
+                                        ? "bg-green-100 text-green-800 border-green-200 cursor-not-allowed"
+                                        : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
                                     }`}
                                   >
                                     {color}
@@ -670,9 +969,14 @@ export default function AddProduct({
                             value={tempSize}
                             onChange={(e) => setTempSize(e.target.value)}
                             placeholder="Add a size (e.g., 8)"
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                            className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all ${
+                              errors.size ? "border-red-500" : "border-gray-300"
+                            }`}
                             min={1}
-                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSize())}
+                            onKeyPress={(e) =>
+                              e.key === "Enter" &&
+                              (e.preventDefault(), handleAddSize())
+                            }
                           />
                           <button
                             type="button"
@@ -682,10 +986,15 @@ export default function AddProduct({
                             Add
                           </button>
                         </div>
+                        {errors.size && (
+                          <p className="text-sm text-red-600">{errors.size}</p>
+                        )}
 
                         {form.sizeOptions.length > 0 ? (
                           <div className="space-y-3">
-                            <p className="text-sm text-gray-600">Available sizes:</p>
+                            <p className="text-sm text-gray-600">
+                              Available sizes:
+                            </p>
                             <div className="flex flex-wrap gap-2">
                               {form.sizeOptions.map((size) => (
                                 <div
@@ -693,7 +1002,9 @@ export default function AddProduct({
                                   className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"
                                 >
                                   <Ruler className="h-4 w-4 text-gray-500" />
-                                  <span className="text-sm font-medium text-gray-700">Size {size}</span>
+                                  <span className="text-sm font-medium text-gray-700">
+                                    Size {size}
+                                  </span>
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveSize(size)}
@@ -706,11 +1017,15 @@ export default function AddProduct({
                             </div>
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500 italic">No sizes added yet</p>
+                          <p className="text-sm text-gray-500 italic">
+                            No sizes added yet
+                          </p>
                         )}
 
                         <div className="mt-4">
-                          <p className="text-sm text-gray-600 mb-2">Quick add common sizes:</p>
+                          <p className="text-sm text-gray-600 mb-2">
+                            Quick add common sizes:
+                          </p>
                           <div className="flex flex-wrap gap-2">
                             {COMMON_SIZES.map((size) => (
                               <button
@@ -718,16 +1033,20 @@ export default function AddProduct({
                                 type="button"
                                 onClick={() => {
                                   if (!form.sizeOptions.includes(size)) {
-                                    setForm(prev => ({
+                                    setForm((prev) => ({
                                       ...prev,
-                                      sizeOptions: [...prev.sizeOptions, size].sort((a, b) => a - b)
+                                      sizeOptions: [
+                                        ...prev.sizeOptions,
+                                        size,
+                                      ].sort((a, b) => a - b),
                                     }));
                                   }
                                 }}
                                 disabled={form.sizeOptions.includes(size)}
-                                className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${form.sizeOptions.includes(size)
-                                  ? 'bg-green-100 text-green-800 border-green-200 cursor-not-allowed'
-                                  : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                                className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
+                                  form.sizeOptions.includes(size)
+                                    ? "bg-green-100 text-green-800 border-green-200 cursor-not-allowed"
+                                    : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
                                 }`}
                               >
                                 Size {size}
@@ -755,7 +1074,8 @@ export default function AddProduct({
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Product Description <span className="text-red-500">*</span>
+                        Product Description{" "}
+                        <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         name="description"
@@ -763,12 +1083,22 @@ export default function AddProduct({
                         onChange={handleChange}
                         placeholder="Describe your product in detail. Include features, specifications, benefits..."
                         rows={5}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none ${
+                          errors.description
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
                         required
                       />
                       <div className="mt-2 flex justify-between items-center">
                         <p className="text-sm text-gray-500">
                           {form.description.length} characters
+                          {errors.description && (
+                            <span className="text-red-600">
+                              {" "}
+                              - {errors.description}
+                            </span>
+                          )}
                         </p>
                         <p className="text-sm text-gray-500">
                           Minimum 20 characters recommended
@@ -804,7 +1134,7 @@ export default function AddProduct({
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Saving...
+                      {editProduct?._id ? "Updating..." : "Adding..."}
                     </>
                   ) : editProduct?._id ? (
                     <>

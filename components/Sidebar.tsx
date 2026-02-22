@@ -186,7 +186,7 @@ function ProfileModal({
             <h3 className="text-lg font-semibold text-white mb-3">Addresses</h3>
             {user.addresses && user.addresses.length > 0 ? (
               <div className="space-y-3">
-                {user.addresses.map((address: any, index: number) => (
+                {user.addresses.map((address: unknown, index: number) => (
                   <div
                     key={index}
                     className="p-3 bg-gray-800/30 rounded-lg border border-gray-700"
@@ -272,6 +272,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/dashboard/users",
       icon: <FiUsers />,
       color: "text-green-400",
+    },
+    {
+      name: "About Us",
+      href: "/dashboard/aboutus",
+      icon: <FiPackage />,
+      color: "text-yellow-400",
+      submenu: [
+        { name: "Add About Us", href: "/dashboard/aboutus/add" },
+        { name: "View About Us", href: "/dashboard/aboutus/view" },
+      ],
     },
     {
       name: "Products",
