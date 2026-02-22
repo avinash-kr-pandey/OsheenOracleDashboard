@@ -1,16 +1,28 @@
 // services/about.api.ts
-import { fetchData, putData, postData } from "@/utils/api";
+import { fetchData, putData } from "@/utils/api";
 
 /* =======================
-   TYPES - Properly defined
+   TYPES - According to backend schema
 ======================= */
+
+export interface Stat {
+  label: string;
+  value: string;
+}
+
+export interface Section {
+  title: string;
+  content: string;
+}
 
 export interface AboutData {
   _id?: string;
-  title: string;
-  description: string;
-  content: string;
-  image?: string; // Keep optional if you want to store image URL from somewhere else
+  heroTitle: string;
+  heroDescription: string;
+  mission: string;
+  vision: string;
+  stats: Stat[];
+  sections: Section[];
   createdAt?: string;
   updatedAt?: string;
   __v?: number;
@@ -19,48 +31,44 @@ export interface AboutData {
 export interface AboutResponse {
   success?: boolean;
   message?: string;
-  data?: AboutData | AboutData[];
-  about?: AboutData;
+  data?: AboutData;
   error?: string;
-  status?: number;
-  statusCode?: number;
 }
 
 /* =======================
-   API CALLS - Clean and separated
-   NO FILE UPLOAD - Completely removed
+   API CALLS - Only GET and PUT as per backend
 ======================= */
 
 export const aboutAPI = {
   /**
    * GET /api/about
    * Fetch about page data
-   * @returns Promise with about data
    */
   getAbout: async (): Promise<AboutData | null> => {
     try {
       console.log("📋 Fetching about data...");
       const response = await fetchData<AboutResponse>("/about");
+      
+      console.log("📦 Raw response:", response);
 
-      // Handle different response structures
-      if (!response) return null;
+      if (!response) {
+        console.log("⚠️ No response received");
+        return null;
+      }
 
-      if (
-        response?.data &&
-        Array.isArray(response.data) &&
-        response.data.length > 0
-      ) {
-        return response.data[0];
-      } else if (response?.data && !Array.isArray(response.data)) {
+      // Backend returns: { success: true, data: aboutObject }
+      if (response.success && response.data) {
+        console.log("✅ About data found:", response.data);
         return response.data;
-      } else if (response?.about) {
-        return response.about;
-      } else if (Array.isArray(response) && response.length > 0) {
-        return response[0] as unknown as AboutData;
-      } else if (!Array.isArray(response) && response && "_id" in response) {
+      }
+
+      // If response itself is the about object
+      if (response && typeof response === 'object' && 'heroTitle' in response) {
+        console.log("✅ Direct about object found");
         return response as unknown as AboutData;
       }
 
+      console.log("⚠️ No valid about data found");
       return null;
     } catch (error) {
       console.error("❌ Get about error:", error);
@@ -69,55 +77,34 @@ export const aboutAPI = {
   },
 
   /**
-   * POST /api/about
-   * Create about page data
-   * @param data - About data to save
-   * @returns Promise with saved about data
-   */
-  createAbout: async (data: Partial<AboutData>): Promise<AboutData | null> => {
-    try {
-      console.log("📝 Creating about data...");
-      const response = await postData<AboutResponse>("/about", data);
-
-      if (!response) return null;
-
-      if (response?.data) {
-        return Array.isArray(response.data) ? response.data[0] : response.data;
-      }
-
-      if (response?.about) {
-        return response.about;
-      }
-
-      if (!Array.isArray(response) && response && "_id" in response) {
-        return response as unknown as AboutData;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("❌ Create about error:", error);
-      throw error;
-    }
-  },
-
-  /**
    * PUT /api/about
    * Update about page data
-   * @param data - About data to update
-   * @returns Promise with updated about data
    */
   updateAbout: async (data: Partial<AboutData>): Promise<AboutData | null> => {
     try {
-      console.log("📝 Updating about data...");
+      console.log("📝 Updating about data with:", data);
+      
       const response = await putData<AboutResponse>("/about", data);
+      console.log("📦 Update response:", response);
 
-      if (!response) return null;
+      if (!response) {
+        console.log("⚠️ No response received");
+        return null;
+      }
 
-      if (response?.data) {
-        return Array.isArray(response.data) ? response.data[0] : response.data;
-      } else if (response?.about) {
-        return response.about;
-      } else if (!Array.isArray(response) && response && "_id" in response) {
+      // Check for error
+      if (!response.success) {
+        throw new Error(response.message || "Update failed");
+      }
+
+      // Backend returns updated data
+      if (response.data) {
+        console.log("✅ About data updated successfully:", response.data);
+        return response.data;
+      }
+
+      // If response itself is the updated object
+      if (response && typeof response === 'object' && 'heroTitle' in response) {
         return response as unknown as AboutData;
       }
 
@@ -130,17 +117,47 @@ export const aboutAPI = {
 
   /**
    * Check if about data exists
-   * @returns Promise<boolean>
    */
   hasAboutData: async (): Promise<boolean> => {
     try {
       const data = await aboutAPI.getAbout();
-      return data !== null && !!data._id;
+      const hasData = data !== null && !!data._id;
+      console.log(`📊 About data exists: ${hasData}`);
+      return hasData;
     } catch {
       return false;
     }
   },
+
+  /**
+   * Initialize default about data if none exists
+   * This is a helper method, not an API call
+   */
+  initializeDefaultData: (): Partial<AboutData> => {
+    return {
+      heroTitle: "Welcome to Our Company",
+      heroDescription: "We are dedicated to providing the best service",
+      mission: "Our mission is to deliver excellence",
+      vision: "To be the industry leader",
+      stats: [
+        { label: "Years of Experience", value: "10+" },
+        { label: "Happy Clients", value: "500+" },
+        { label: "Projects Completed", value: "1000+" },
+        { label: "Team Members", value: "50+" }
+      ],
+      sections: [
+        {
+          title: "Our Story",
+          content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+        },
+        {
+          title: "Our Values",
+          content: "Integrity, Innovation, Excellence, Customer First"
+        }
+      ]
+    };
+  }
 };
 
-// Export types for use in components
+// Export types
 export type { AboutData as AboutDataType };
