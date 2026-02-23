@@ -1,6 +1,5 @@
 "use client";
 
-
 import { aboutAPI, AboutDataType } from "@/utils/about.api";
 import React, { useState, useEffect } from "react";
 
@@ -14,12 +13,15 @@ const AboutPage = () => {
     mission: "",
     vision: "",
     stats: [] as { label: string; value: string }[],
-    sections: [] as { title: string; content: string }[],
+    sections: [] as { title: string; content: string; image?: string }[],
   });
   const [message, setMessage] = useState<{
     type: "success" | "error" | "info";
     text: string;
   } | null>(null);
+  const [previewImages, setPreviewImages] = useState<{ [key: number]: string }>(
+    {},
+  );
 
   // Fetch about data
   const fetchAboutData = async (showMessage = false) => {
@@ -40,14 +42,14 @@ const AboutPage = () => {
           stats: data.stats || [],
           sections: data.sections || [],
         });
+      }
 
-        if (showMessage) {
-          setMessage({
-            type: "success",
-            text: "✅ Data refreshed successfully!",
-          });
-          setTimeout(() => setMessage(null), 3000);
-        }
+      if (showMessage) {
+        setMessage({
+          type: "success",
+          text: "✅ Data refreshed successfully!",
+        });
+        setTimeout(() => setMessage(null), 3000);
       }
     } catch (error) {
       console.error("❌ Fetch error:", error);
@@ -105,10 +107,10 @@ const AboutPage = () => {
     }));
   };
 
-  // Handle sections
+  // Handle sections with image
   const handleSectionChange = (
     index: number,
-    field: "title" | "content",
+    field: "title" | "content" | "image",
     value: string,
   ) => {
     const newSections = [...formData.sections];
@@ -119,15 +121,35 @@ const AboutPage = () => {
   const addSection = () => {
     setFormData((prev) => ({
       ...prev,
-      sections: [...prev.sections, { title: "", content: "" }],
+      sections: [...prev.sections, { title: "", content: "", image: "" }],
     }));
   };
 
   const removeSection = (index: number) => {
+    const newSections = formData.sections.filter((_, i) => i !== index);
     setFormData((prev) => ({
       ...prev,
-      sections: prev.sections.filter((_, i) => i !== index),
+      sections: newSections,
     }));
+    // Clean up preview
+    const newPreviews = { ...previewImages };
+    delete newPreviews[index];
+    setPreviewImages(newPreviews);
+  };
+
+  // Handle image file selection
+  const handleImageSelect = (index: number, file: File) => {
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setPreviewImages((prev) => ({ ...prev, [index]: previewUrl }));
+
+    // Convert file to base64 for saving
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      handleSectionChange(index, "image", base64String);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Handle update
@@ -147,6 +169,7 @@ const AboutPage = () => {
     }
 
     try {
+      console.log("Sending data:", formData); // Debug log
       const response = await aboutAPI.updateAbout(formData);
 
       if (response) {
@@ -156,6 +179,7 @@ const AboutPage = () => {
         });
         setAboutData(response);
         setIsEditing(false);
+        setPreviewImages({}); // Clear previews
 
         setTimeout(() => setMessage(null), 3000);
       }
@@ -170,6 +194,13 @@ const AboutPage = () => {
     }
   };
 
+  // Clean up preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(previewImages).forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewImages]);
+
   // Loading State
   if (loading) {
     return (
@@ -182,7 +213,7 @@ const AboutPage = () => {
     );
   }
 
-  // No Data State - Yeh tab show hoga jab API null return kare
+  // No Data State
   if (!aboutData) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -339,21 +370,6 @@ const AboutPage = () => {
                 />
               </svg>
             )}
-            {message.type === "info" && (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            )}
             <span>{message.text}</span>
           </div>
         )}
@@ -361,7 +377,7 @@ const AboutPage = () => {
         {/* View Mode */}
         {!isEditing && aboutData && (
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            {/* Hero Section with Image Placeholder */}
+            {/* Hero Section */}
             <div className="relative h-64 bg-gradient-to-r from-blue-600 to-purple-600">
               <div className="absolute inset-0 bg-black opacity-50"></div>
               <div className="absolute inset-0 flex items-center justify-center text-center p-6">
@@ -475,7 +491,7 @@ const AboutPage = () => {
                 </div>
               )}
 
-              {/* Additional Sections */}
+              {/* Additional Sections with Images */}
               {aboutData.sections && aboutData.sections.length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -494,18 +510,33 @@ const AboutPage = () => {
                     </svg>
                     More Information
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {aboutData.sections.map((section, index) => (
                       <div
                         key={section._id || index}
-                        className="bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500"
+                        className="bg-white rounded-lg overflow-hidden border border-gray-200 shadow-sm"
                       >
-                        <h4 className="font-semibold text-gray-800 mb-2">
-                          {section.title}
-                        </h4>
-                        <p className="text-gray-600 leading-relaxed">
-                          {section.content}
-                        </p>
+                        {section.image && (
+                          <div className="relative h-64 w-full bg-gray-100">
+                            <img
+                              src={section.image}
+                              alt={section.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  "https://via.placeholder.com/800x400?text=Image+Not+Found";
+                              }}
+                            />
+                          </div>
+                        )}
+                        <div className="p-6">
+                          <h4 className="font-semibold text-gray-800 mb-2 text-lg">
+                            {section.title}
+                          </h4>
+                          <p className="text-gray-600 leading-relaxed">
+                            {section.content}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -538,7 +569,7 @@ const AboutPage = () => {
           </div>
         )}
 
-        {/* Edit Mode Modal - Same as before, no changes needed */}
+        {/* Edit Mode Modal */}
         {isEditing && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -592,7 +623,7 @@ const AboutPage = () => {
               </div>
 
               <form onSubmit={handleUpdate} className="p-6 space-y-6">
-                {/* Form fields - same as before */}
+                {/* Hero Section */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-gray-700 border-b pb-2">
                     Hero Section
@@ -695,7 +726,7 @@ const AboutPage = () => {
                           onChange={(e) =>
                             handleStatChange(index, "label", e.target.value)
                           }
-                          placeholder="Label (e.g., Years)"
+                          placeholder="Label (e.g., Projects)"
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                         <input
@@ -704,7 +735,7 @@ const AboutPage = () => {
                           onChange={(e) =>
                             handleStatChange(index, "value", e.target.value)
                           }
-                          placeholder="Value (e.g., 10+)"
+                          placeholder="Value (e.g., 1200+)"
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                         <button
@@ -732,11 +763,11 @@ const AboutPage = () => {
                   </div>
                 </div>
 
-                {/* Sections */}
+                {/* Sections with Image Upload */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      Additional Sections
+                      Additional Sections (with Images)
                     </label>
                     <button
                       type="button"
@@ -790,15 +821,19 @@ const AboutPage = () => {
                             </svg>
                           </button>
                         </div>
+
+                        {/* Title Input */}
                         <input
                           type="text"
                           value={section.title}
                           onChange={(e) =>
                             handleSectionChange(index, "title", e.target.value)
                           }
-                          placeholder="Section Title"
+                          placeholder="Section Title (e.g., Our Journey)"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-2"
                         />
+
+                        {/* Content Textarea */}
                         <textarea
                           value={section.content}
                           onChange={(e) =>
@@ -808,10 +843,133 @@ const AboutPage = () => {
                               e.target.value,
                             )
                           }
-                          placeholder="Section Content"
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          placeholder="Section Content (e.g., Started small, now global)"
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-3"
                         />
+
+                        {/* Image Upload - Direct to same API */}
+                        <div className="space-y-3">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Section Image
+                          </label>
+
+                          {/* Image Preview */}
+                          {(section.image || previewImages[index]) && (
+                            <div className="relative w-full h-40 mb-2 rounded-lg overflow-hidden border border-gray-200 bg-white">
+                              <img
+                                src={previewImages[index] || section.image}
+                                alt="Preview"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src =
+                                    "https://via.placeholder.com/400x200?text=Invalid+Image";
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleSectionChange(index, "image", "");
+                                  const newPreviews = { ...previewImages };
+                                  delete newPreviews[index];
+                                  setPreviewImages(newPreviews);
+                                }}
+                                className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow-lg transition"
+                                title="Remove image"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Two Ways to Add Image */}
+                          <div className="space-y-3">
+                            {/* Option 1: Manual URL */}
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">
+                                Option 1: Enter Image URL
+                              </p>
+                              <input
+                                type="text"
+                                value={section.image || ""}
+                                onChange={(e) => {
+                                  handleSectionChange(
+                                    index,
+                                    "image",
+                                    e.target.value,
+                                  );
+                                  // Clear preview if user starts typing URL
+                                  if (previewImages[index]) {
+                                    const newPreviews = { ...previewImages };
+                                    delete newPreviews[index];
+                                    setPreviewImages(newPreviews);
+                                  }
+                                }}
+                                placeholder="Enter image URL (e.g., /uploads/journey.jpg)"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+
+                            {/* Option 2: File Upload - Direct to same API */}
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">
+                                Option 2: Upload Image File
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="file"
+                                  id={`image-upload-${index}`}
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      handleImageSelect(index, file);
+                                    }
+                                  }}
+                                />
+                                <label
+                                  htmlFor={`image-upload-${index}`}
+                                  className="cursor-pointer bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg border border-blue-200 flex items-center gap-2"
+                                >
+                                  <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                                    />
+                                  </svg>
+                                  Choose File
+                                </label>
+                                <span className="text-sm text-gray-500">
+                                  PNG, JPG, GIF (Max 5MB)
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-400 mt-1">
+                                Image will be converted to base64 and saved with
+                                the section data
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
