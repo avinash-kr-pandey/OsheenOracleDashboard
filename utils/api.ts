@@ -10,34 +10,39 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  // ✅ Important: withCredentials false rakhein
+  withCredentials: false,
 });
 
-// Request interceptor to add token from localStorage
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Check if we're in browser environment
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+
+      // ✅ FIX: GET requests se cache headers hatao
+      if (config.method?.toLowerCase() === "get") {
+        // Sirf Authorization header rakho, cache headers hatao
+        delete config.headers["Cache-Control"];
+        delete config.headers["Pragma"];
+        delete config.headers["Expires"];
+      }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error),
 );
 
-// Response interceptor to handle 401 errors
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
         const currentPath = window.location.pathname;
-
-        // 🚫 Login page par ho to redirect mat karo
         if (currentPath !== "/login") {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
@@ -46,7 +51,7 @@ api.interceptors.response.use(
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Set token dynamically
@@ -59,19 +64,16 @@ export const setAuthToken = (token: string | null) => {
 };
 
 /* =======================
-   GET
+   GET - UPDATED
 ======================= */
 export const fetchData = async <T = unknown>(
   endpoint: string,
   params?: object,
-  noCache: boolean = true
+  noCache: boolean = false, // ✅ Default false
 ): Promise<T> => {
   try {
-    const headers = noCache ? { "Cache-Control": "no-cache" } : undefined;
-    const response: AxiosResponse<T> = await api.get(endpoint, {
-      params,
-      headers,
-    });
+    // ✅ Sirf params bhejo, headers mat bhejo
+    const response: AxiosResponse<T> = await api.get(endpoint, { params });
     return response.data;
   } catch (error) {
     const err = error as AxiosError;
@@ -85,7 +87,7 @@ export const fetchData = async <T = unknown>(
 ======================= */
 export const postData = async <T = unknown>(
   endpoint: string,
-  data: object
+  data: object,
 ): Promise<T> => {
   try {
     const response: AxiosResponse<T> = await api.post(endpoint, data);
@@ -102,7 +104,7 @@ export const postData = async <T = unknown>(
 ======================= */
 export const putData = async <T = unknown>(
   endpoint: string,
-  data: object
+  data: object,
 ): Promise<T> => {
   try {
     const response: AxiosResponse<T> = await api.put(endpoint, data);
@@ -148,7 +150,7 @@ export interface Horoscope {
   createdAt: string;
   updatedAt: string;
   __v?: number;
-  
+
   // For backward compatibility - optional
   sign?: string;
 }
@@ -162,7 +164,7 @@ export interface HoroscopeResponse {
   error?: string;
   status?: number;
   statusCode?: number;
-  
+
   // For when the response is directly a Horoscope object
   _id?: string;
   zodiacSign?: string;
@@ -187,7 +189,7 @@ export interface CreateHoroscopeData {
   timeFrame: string;
   rishiName: string;
   rishiNameHindi: string;
-  
+
   // Optional for backward compatibility
   sign?: string;
 }
@@ -199,8 +201,10 @@ export const horoscopeAPI = {
    * @param horoscopeData - Complete horoscope data with Hindi fields
    * @returns Promise with response
    */
-  addHoroscope: (horoscopeData: CreateHoroscopeData): Promise<HoroscopeResponse> => {
-    console.log('📝 Adding horoscope:', horoscopeData);
+  addHoroscope: (
+    horoscopeData: CreateHoroscopeData,
+  ): Promise<HoroscopeResponse> => {
+    console.log("📝 Adding horoscope:", horoscopeData);
     return postData<HoroscopeResponse>("/horoscope", horoscopeData);
   },
 
@@ -211,7 +215,7 @@ export const horoscopeAPI = {
    * @returns Promise with horoscope data
    */
   getHoroscopeBySign: (sign: string): Promise<HoroscopeResponse> => {
-    console.log('🔍 Fetching horoscope for sign:', sign);
+    console.log("🔍 Fetching horoscope for sign:", sign);
     return fetchData<HoroscopeResponse>(`/horoscope/${sign}`);
   },
 
@@ -222,8 +226,11 @@ export const horoscopeAPI = {
    * @param time - Time frame (daily, weekly, monthly, yearly)
    * @returns Promise with horoscope data
    */
-  getHoroscopeBySignAndTime: (sign: string, time: string): Promise<HoroscopeResponse> => {
-    console.log('📅 Fetching horoscope for:', sign, time);
+  getHoroscopeBySignAndTime: (
+    sign: string,
+    time: string,
+  ): Promise<HoroscopeResponse> => {
+    console.log("📅 Fetching horoscope for:", sign, time);
     return fetchData<HoroscopeResponse>(`/horoscope/${sign}/${time}`);
   },
 
@@ -233,7 +240,7 @@ export const horoscopeAPI = {
    * @returns Promise with all horoscopes
    */
   getAllHoroscopes: (): Promise<HoroscopeResponse> => {
-    console.log('📋 Fetching all horoscopes');
+    console.log("📋 Fetching all horoscopes");
     return fetchData<HoroscopeResponse>("/horoscope");
   },
 };

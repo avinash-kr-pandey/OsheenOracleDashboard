@@ -8,11 +8,13 @@ import { fetchData, putData } from "@/utils/api";
 export interface Stat {
   label: string;
   value: string;
+  _id?: string; // Backend _id field optional
 }
 
 export interface Section {
   title: string;
   content: string;
+  _id?: string; // Backend _id field optional
 }
 
 export interface AboutData {
@@ -47,8 +49,8 @@ export const aboutAPI = {
   getAbout: async (): Promise<AboutData | null> => {
     try {
       console.log("📋 Fetching about data...");
-      const response = await fetchData<AboutResponse>("/about");
-      
+      const response = await fetchData<AboutResponse | AboutData>("/about");
+
       console.log("📦 Raw response:", response);
 
       if (!response) {
@@ -56,16 +58,23 @@ export const aboutAPI = {
         return null;
       }
 
-      // Backend returns: { success: true, data: aboutObject }
-      if (response.success && response.data) {
-        console.log("✅ About data found:", response.data);
-        return response.data;
-      }
+      // 🔥 Case 1: Response is { success: true, data: aboutObject }
+      if (typeof response === "object" && response !== null) {
+        // Check if it's the wrapped response
+        if (
+          "success" in response &&
+          response.success === true &&
+          response.data
+        ) {
+          console.log("✅ About data found in wrapper:", response.data);
+          return response.data;
+        }
 
-      // If response itself is the about object
-      if (response && typeof response === 'object' && 'heroTitle' in response) {
-        console.log("✅ Direct about object found");
-        return response as unknown as AboutData;
+        // 🔥 Case 2: Response is directly the AboutData object
+        if ("heroTitle" in response || "mission" in response) {
+          console.log("✅ Direct about object found");
+          return response as AboutData;
+        }
       }
 
       console.log("⚠️ No valid about data found");
@@ -83,8 +92,8 @@ export const aboutAPI = {
   updateAbout: async (data: Partial<AboutData>): Promise<AboutData | null> => {
     try {
       console.log("📝 Updating about data with:", data);
-      
-      const response = await putData<AboutResponse>("/about", data);
+
+      const response = await putData<AboutResponse | AboutData>("/about", data);
       console.log("📦 Update response:", response);
 
       if (!response) {
@@ -92,20 +101,23 @@ export const aboutAPI = {
         return null;
       }
 
-      // Check for error
-      if (!response.success) {
-        throw new Error(response.message || "Update failed");
-      }
+      // 🔥 Handle wrapped response
+      if (typeof response === "object" && response !== null) {
+        if ("success" in response) {
+          if (response.success === false) {
+            throw new Error(response.message || "Update failed");
+          }
+          if (response.success === true && response.data) {
+            console.log("✅ About data updated successfully:", response.data);
+            return response.data;
+          }
+        }
 
-      // Backend returns updated data
-      if (response.data) {
-        console.log("✅ About data updated successfully:", response.data);
-        return response.data;
-      }
-
-      // If response itself is the updated object
-      if (response && typeof response === 'object' && 'heroTitle' in response) {
-        return response as unknown as AboutData;
+        // 🔥 Direct object response
+        if ("heroTitle" in response || "mission" in response) {
+          console.log("✅ Direct updated object received");
+          return response as AboutData;
+        }
       }
 
       return null;
@@ -129,34 +141,7 @@ export const aboutAPI = {
     }
   },
 
-  /**
-   * Initialize default about data if none exists
-   * This is a helper method, not an API call
-   */
-  initializeDefaultData: (): Partial<AboutData> => {
-    return {
-      heroTitle: "Welcome to Our Company",
-      heroDescription: "We are dedicated to providing the best service",
-      mission: "Our mission is to deliver excellence",
-      vision: "To be the industry leader",
-      stats: [
-        { label: "Years of Experience", value: "10+" },
-        { label: "Happy Clients", value: "500+" },
-        { label: "Projects Completed", value: "1000+" },
-        { label: "Team Members", value: "50+" }
-      ],
-      sections: [
-        {
-          title: "Our Story",
-          content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-        },
-        {
-          title: "Our Values",
-          content: "Integrity, Innovation, Excellence, Customer First"
-        }
-      ]
-    };
-  }
+  // 🗑️ REMOVED: initializeDefaultData method - No hardcoded data!
 };
 
 // Export types
