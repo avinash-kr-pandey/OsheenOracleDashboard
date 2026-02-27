@@ -10,7 +10,6 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  // ✅ Important: withCredentials false rakhein
   withCredentials: false,
 });
 
