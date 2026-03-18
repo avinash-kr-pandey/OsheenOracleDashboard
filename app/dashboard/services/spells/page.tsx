@@ -1,71 +1,101 @@
-// pages/admin/AdminRashi.tsx
+// pages/admin/AdminSpells.tsx
+
 "use client";
-import { CreateRishiData, rashiAPI, Rishi } from "@/utils/rashi.api";
+import { CreateSpellTypeData, spellsAPI, SpellType } from "@/utils/spells.api";
 import React, { useState, useEffect } from "react";
 
+// Define proper types for API errors
+interface ApiError {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
 
-// Era options for dropdown
-const eraOptions = [
-  "Vedic Period",
-  "Puranic Period",
-  "Medieval Period",
-  "Modern Period",
-  "Ancient",
-  "Treta Yuga",
-  "Dwapara Yuga",
-  "Kali Yuga",
-  "Satya Yuga",
-  "Unknown",
+// Predefined icons for selection
+const iconOptions = [
+  { value: "fa-heart", label: "Heart", emoji: "❤️" },
+  { value: "fa-star", label: "Star", emoji: "⭐" },
+  { value: "fa-moon", label: "Moon", emoji: "🌙" },
+  { value: "fa-sun", label: "Sun", emoji: "☀️" },
+  { value: "fa-fire", label: "Fire", emoji: "🔥" },
+  { value: "fa-water", label: "Water", emoji: "💧" },
+  { value: "fa-leaf", label: "Leaf", emoji: "🍃" },
+  { value: "fa-crystal", label: "Crystal", emoji: "💎" },
+  { value: "fa-feather", label: "Feather", emoji: "🪶" },
+  { value: "fa-candle", label: "Candle", emoji: "🕯️" },
+  { value: "fa-skull", label: "Skull", emoji: "💀" },
+  { value: "fa-dragon", label: "Dragon", emoji: "🐉" },
+  { value: "fa-owl", label: "Owl", emoji: "🦉" },
+  { value: "fa-wolf", label: "Wolf", emoji: "🐺" },
+  { value: "fa-tree", label: "Tree", emoji: "🌳" },
 ];
 
-const AdminRashi: React.FC = () => {
+// Toast type
+type ToastType = "success" | "error";
+
+interface ToastState {
+  show: boolean;
+  message: string;
+  type: ToastType;
+}
+
+const AdminSpells: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"add" | "view">("add");
-  const [rishis, setRishis] = useState<Rishi[]>([]);
+  const [spellTypes, setSpellTypes] = useState<SpellType[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEra, setSelectedEra] = useState("");
 
   // Modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [selectedRishi, setSelectedRishi] = useState<Rishi | null>(null);
-  const [showToast, setShowToast] = useState({
+  const [selectedSpell, setSelectedSpell] = useState<SpellType | null>(null);
+  const [showToast, setShowToast] = useState<ToastState>({
     show: false,
     message: "",
     type: "success",
   });
 
   // Form states
-  const [formData, setFormData] = useState<CreateRishiData>({
-    name: "",
-    biography: "",
-    era: "",
+  const [formData, setFormData] = useState<CreateSpellTypeData>({
+    type: "",
+    description: "",
+    idealFor: "",
+    icon: "",
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Fetch rishis on mount
+  // Fetch spell types on mount
   useEffect(() => {
-    fetchRishis();
+    fetchSpellTypes();
   }, []);
 
-  const fetchRishis = async () => {
+  const fetchSpellTypes = async () => {
     setLoading(true);
     try {
-      const data = await rashiAPI.getAllRishis();
-      // Handle both array response and object response
-      const rishisArray = Array.isArray(data) ? data : [];
-      setRishis(rishisArray);
+      const response = await spellsAPI.getAllSpellTypes();
+      if (response.success && response.data && Array.isArray(response.data)) {
+        setSpellTypes(response.data);
+      }
     } catch (error) {
-      showNotification("Error fetching rishis", "error");
+      const apiError = error as ApiError;
+      showNotification(
+        apiError?.message ||
+          apiError?.response?.data?.message ||
+          "Error fetching spell types",
+        "error",
+      );
       console.error("Fetch error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const showNotification = (message: string, type: "success" | "error") => {
+  const showNotification = (message: string, type: ToastType) => {
     setShowToast({ show: true, message, type });
     setTimeout(
       () => setShowToast({ show: false, message: "", type: "success" }),
@@ -75,111 +105,143 @@ const AdminRashi: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      biography: "",
-      era: "",
+      type: "",
+      description: "",
+      idealFor: "",
+      icon: "",
     });
     setFormErrors({});
   };
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-    if (!formData.name.trim()) errors.name = "Name is required";
-    if (!formData.biography.trim()) errors.biography = "Biography is required";
-    if (!formData.era) errors.era = "Era is required";
+    if (!formData.type.trim()) errors.type = "Spell type name is required";
+    if (!formData.description.trim())
+      errors.description = "Description is required";
+    if (!formData.idealFor.trim())
+      errors.idealFor = "Ideal for field is required";
+    if (!formData.icon) errors.icon = "Please select an icon";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  // Handle Add Rishi
-  const handleAddRishi = async (e: React.FormEvent) => {
+  // Handle Add Spell Type
+  const handleAddSpell = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setLoading(true);
     try {
-      const response = await rashiAPI.addRishi(formData);
-      if (response.message === "Rishi added" || response.rishi) {
-        showNotification("Rishi added successfully!", "success");
+      const response = await spellsAPI.createSpellType(formData);
+      if (response.success) {
+        showNotification("Spell type added successfully!", "success");
         resetForm();
-        fetchRishis();
+        fetchSpellTypes();
         setActiveTab("view");
       }
-    } catch (error: any) {
-      showNotification(error?.message || "Error adding rishi", "error");
+    } catch (error) {
+      const apiError = error as ApiError;
+      showNotification(
+        apiError?.message ||
+          apiError?.response?.data?.message ||
+          "Error adding spell type",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle View Rishi
-  const handleViewClick = (rishi: Rishi) => {
-    setSelectedRishi(rishi);
+  // Handle View Spell
+  const handleViewClick = (spell: SpellType) => {
+    setSelectedSpell(spell);
     setShowViewModal(true);
   };
 
-  // Handle Edit Rishi
-  const handleEditClick = (rishi: Rishi) => {
-    setSelectedRishi(rishi);
+  // Handle Edit Spell
+  const handleEditClick = (spell: SpellType) => {
+    setSelectedSpell(spell);
     setFormData({
-      name: rishi.name,
-      biography: rishi.biography,
-      era: rishi.era,
+      type: spell.type,
+      description: spell.description,
+      idealFor: spell.idealFor,
+      icon: spell.icon,
     });
     setShowEditModal(true);
   };
 
-  const handleUpdateRishi = async () => {
-    if (!selectedRishi || !validateForm()) return;
+  const handleUpdateSpell = async () => {
+    if (!selectedSpell || !validateForm()) return;
 
     setLoading(true);
     try {
-      // Note: Backend me update endpoint nahi hai,
-      // agar future me add karein to ye kaam karega
-      const response = await rashiAPI.updateRishi(selectedRishi._id, formData);
-      showNotification("Rishi updated successfully!", "success");
-      setShowEditModal(false);
-      fetchRishis();
-      resetForm();
-    } catch (error: any) {
-      showNotification(error?.message || "Error updating rishi", "error");
+      const response = await spellsAPI.updateSpellType(
+        selectedSpell._id,
+        formData,
+      );
+      if (response.success) {
+        showNotification("Spell type updated successfully!", "success");
+        setShowEditModal(false);
+        fetchSpellTypes();
+        resetForm();
+      }
+    } catch (error) {
+      const apiError = error as ApiError;
+      showNotification(
+        apiError?.message ||
+          apiError?.response?.data?.message ||
+          "Error updating spell type",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle Delete Rishi
-  const handleDeleteClick = (rishi: Rishi) => {
-    setSelectedRishi(rishi);
+  // Handle Delete Spell
+  const handleDeleteClick = (spell: SpellType) => {
+    setSelectedSpell(spell);
     setShowDeleteModal(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedRishi) return;
+    if (!selectedSpell) return;
 
     setLoading(true);
     try {
-      // Note: Backend me delete endpoint nahi hai,
-      // agar future me add karein to ye kaam karega
-      const response = await rashiAPI.deleteRishi(selectedRishi._id);
-      showNotification("Rishi deleted successfully!", "success");
-      setShowDeleteModal(false);
-      fetchRishis();
-    } catch (error: any) {
-      showNotification(error?.message || "Error deleting rishi", "error");
+      const response = await spellsAPI.deleteSpellType(selectedSpell._id);
+      if (response.success) {
+        showNotification("Spell type deleted successfully!", "success");
+        setShowDeleteModal(false);
+        fetchSpellTypes();
+      }
+    } catch (error) {
+      const apiError = error as ApiError;
+      showNotification(
+        apiError?.message ||
+          apiError?.response?.data?.message ||
+          "Error deleting spell type",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter rishis based on search and era
-  const filteredRishis = rishis.filter((rishi) => {
-    const matchesSearch =
-      rishi.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rishi.biography.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesEra = !selectedEra || rishi.era === selectedEra;
-    return matchesSearch && matchesEra;
+  // Filter spell types based on search
+  const filteredSpells = spellTypes.filter((spell) => {
+    return (
+      spell.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      spell.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      spell.idealFor.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
+
+  // Get icon emoji for display
+  const getIconEmoji = (iconValue: string): string => {
+    const icon = iconOptions.find((i) => i.value === iconValue);
+    return icon ? icon.emoji : "📿";
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -187,10 +249,10 @@ const AdminRashi: React.FC = () => {
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <h1 className="text-3xl font-bold text-gray-900">
-            Rishi (Rashi) Management
+            Spell Types Management
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Add and manage ancient sages and their biographies
+            Add and manage different types of spells and their descriptions
           </p>
         </div>
       </div>
@@ -221,7 +283,7 @@ const AdminRashi: React.FC = () => {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Add New Rishi
+                Add New Spell Type
               </span>
             </button>
             <button
@@ -252,7 +314,7 @@ const AdminRashi: React.FC = () => {
                     d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                   />
                 </svg>
-                View All Rishis ({rishis.length})
+                View All Spell Types ({spellTypes.length})
               </span>
             </button>
           </nav>
@@ -261,81 +323,110 @@ const AdminRashi: React.FC = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Add Rishi Tab */}
+        {/* Add Spell Tab */}
         {activeTab === "add" && (
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">
-              Add New Rishi
+              Add New Spell Type
             </h2>
 
-            <form onSubmit={handleAddRishi} className="space-y-6">
-              {/* Name */}
+            <form onSubmit={handleAddSpell} className="space-y-6">
+              {/* Spell Type Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rishi Name <span className="text-red-500">*</span>
+                  Spell Type Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  value={formData.name}
+                  value={formData.type}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setFormData({ ...formData, type: e.target.value })
                   }
                   className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.name ? "border-red-500" : "border-gray-300"
+                    formErrors.type ? "border-red-500" : "border-gray-300"
                   }`}
-                  placeholder="e.g., Vashishtha, Vishwamitra, Agastya"
+                  placeholder="e.g., Love Spell, Protection Spell, Healing Spell"
                 />
-                {formErrors.name && (
-                  <p className="mt-1 text-sm text-red-500">{formErrors.name}</p>
+                {formErrors.type && (
+                  <p className="mt-1 text-sm text-red-500">{formErrors.type}</p>
                 )}
               </div>
 
-              {/* Era */}
+              {/* Icon Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Era / Period <span className="text-red-500">*</span>
+                  Icon <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={formData.era}
+                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-3">
+                  {iconOptions.map((icon) => (
+                    <button
+                      key={icon.value}
+                      type="button"
+                      onClick={() =>
+                        setFormData({ ...formData, icon: icon.value })
+                      }
+                      className={`p-3 border rounded-lg flex flex-col items-center gap-1 transition-all ${
+                        formData.icon === icon.value
+                          ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
+                          : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className="text-2xl">{icon.emoji}</span>
+                      <span className="text-xs text-gray-600">
+                        {icon.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {formErrors.icon && (
+                  <p className="mt-1 text-sm text-red-500">{formErrors.icon}</p>
+                )}
+              </div>
+
+              {/* Ideal For */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ideal For <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.idealFor}
                   onChange={(e) =>
-                    setFormData({ ...formData, era: e.target.value })
+                    setFormData({ ...formData, idealFor: e.target.value })
                   }
                   className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.era ? "border-red-500" : "border-gray-300"
+                    formErrors.idealFor ? "border-red-500" : "border-gray-300"
                   }`}
-                >
-                  <option value="">Select Era</option>
-                  {eraOptions.map((era) => (
-                    <option key={era} value={era}>
-                      {era}
-                    </option>
-                  ))}
-                </select>
-                {formErrors.era && (
-                  <p className="mt-1 text-sm text-red-500">{formErrors.era}</p>
+                  placeholder="e.g., Love seekers, Protection from negativity, Health issues"
+                />
+                {formErrors.idealFor && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {formErrors.idealFor}
+                  </p>
                 )}
               </div>
 
-              {/* Biography */}
+              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Biography / Description{" "}
-                  <span className="text-red-500">*</span>
+                  Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  value={formData.biography}
+                  value={formData.description}
                   onChange={(e) =>
-                    setFormData({ ...formData, biography: e.target.value })
+                    setFormData({ ...formData, description: e.target.value })
                   }
-                  rows={8}
+                  rows={6}
                   className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.biography ? "border-red-500" : "border-gray-300"
+                    formErrors.description
+                      ? "border-red-500"
+                      : "border-gray-300"
                   }`}
-                  placeholder="Write detailed biography, contributions, and significance of the rishi..."
+                  placeholder="Write detailed description of this spell type, its uses, and benefits..."
                 />
-                {formErrors.biography && (
+                {formErrors.description && (
                   <p className="mt-1 text-sm text-red-500">
-                    {formErrors.biography}
+                    {formErrors.description}
                   </p>
                 )}
               </div>
@@ -386,7 +477,7 @@ const AdminRashi: React.FC = () => {
                           d="M12 4v16m8-8H4"
                         />
                       </svg>
-                      Add Rishi
+                      Add Spell Type
                     </>
                   )}
                 </button>
@@ -395,56 +486,36 @@ const AdminRashi: React.FC = () => {
           </div>
         )}
 
-        {/* View Rishis Tab */}
+        {/* View Spell Types Tab */}
         {activeTab === "view" && (
           <div className="space-y-6">
-            {/* Filters */}
+            {/* Search */}
             <div className="bg-white shadow rounded-lg p-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Search
+                    Search Spell Types
                   </label>
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by name or biography..."
+                    placeholder="Search by name, description, or ideal for..."
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Filter by Era
-                  </label>
-                  <select
-                    value={selectedEra}
-                    onChange={(e) => setSelectedEra(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">All Eras</option>
-                    {eraOptions.map((era) => (
-                      <option key={era} value={era}>
-                        {era}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 <div className="flex items-end">
                   <button
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSelectedEra("");
-                    }}
+                    onClick={() => setSearchTerm("")}
                     className="px-4 py-2 text-gray-600 hover:text-gray-900"
                   >
-                    Clear Filters
+                    Clear Search
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Rishis Grid */}
+            {/* Spell Types Grid */}
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <svg
@@ -470,7 +541,7 @@ const AdminRashi: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredRishis.length === 0 ? (
+                {filteredSpells.length === 0 ? (
                   <div className="col-span-full text-center py-12">
                     <svg
                       className="mx-auto h-12 w-12 text-gray-400"
@@ -486,14 +557,14 @@ const AdminRashi: React.FC = () => {
                       />
                     </svg>
                     <h3 className="mt-2 text-sm font-medium text-gray-900">
-                      No rishis found
+                      No spell types found
                     </h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      {searchTerm || selectedEra
-                        ? "Try clearing the filters"
-                        : "Get started by adding a new rishi."}
+                      {searchTerm
+                        ? "Try clearing the search"
+                        : "Get started by adding a new spell type."}
                     </p>
-                    {!searchTerm && !selectedEra && (
+                    {!searchTerm && (
                       <div className="mt-6">
                         <button
                           onClick={() => setActiveTab("add")}
@@ -512,30 +583,30 @@ const AdminRashi: React.FC = () => {
                               d="M12 4v16m8-8H4"
                             />
                           </svg>
-                          Add New Rishi
+                          Add New Spell Type
                         </button>
                       </div>
                     )}
                   </div>
                 ) : (
-                  filteredRishis.map((rishi) => (
+                  filteredSpells.map((spell) => (
                     <div
-                      key={rishi._id}
+                      key={spell._id}
                       className="bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
                     >
                       <div className="p-6">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {rishi.name}
-                            </h3>
-                            <span className="inline-flex mt-1 px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                              {rishi.era}
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">
+                              {getIconEmoji(spell.icon)}
                             </span>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {spell.type}
+                            </h3>
                           </div>
                           <div className="flex space-x-2">
                             <button
-                              onClick={() => handleViewClick(rishi)}
+                              onClick={() => handleViewClick(spell)}
                               className="text-gray-400 hover:text-gray-600"
                               title="View Details"
                             >
@@ -560,7 +631,7 @@ const AdminRashi: React.FC = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleEditClick(rishi)}
+                              onClick={() => handleEditClick(spell)}
                               className="text-blue-400 hover:text-blue-600"
                               title="Edit"
                             >
@@ -579,7 +650,7 @@ const AdminRashi: React.FC = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDeleteClick(rishi)}
+                              onClick={() => handleDeleteClick(spell)}
                               className="text-red-400 hover:text-red-600"
                               title="Delete"
                             >
@@ -599,8 +670,15 @@ const AdminRashi: React.FC = () => {
                             </button>
                           </div>
                         </div>
+
+                        <div className="mt-3">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            Ideal for: {spell.idealFor}
+                          </span>
+                        </div>
+
                         <p className="mt-3 text-sm text-gray-600 line-clamp-3">
-                          {rishi.biography}
+                          {spell.description}
                         </p>
                       </div>
                     </div>
@@ -613,12 +691,12 @@ const AdminRashi: React.FC = () => {
       </div>
 
       {/* View Modal */}
-      {showViewModal && selectedRishi && (
+      {showViewModal && selectedSpell && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900">
-                Rishi Details
+                Spell Type Details
               </h3>
               <button
                 onClick={() => setShowViewModal(false)}
@@ -640,39 +718,47 @@ const AdminRashi: React.FC = () => {
               </button>
             </div>
             <div className="px-6 py-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-500">
-                  Name
-                </label>
-                <p className="mt-1 text-lg text-gray-900">
-                  {selectedRishi.name}
-                </p>
+              <div className="flex items-center gap-4">
+                <span className="text-4xl">
+                  {getIconEmoji(selectedSpell.icon)}
+                </span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500">
+                    Spell Type
+                  </label>
+                  <p className="mt-1 text-xl text-gray-900">
+                    {selectedSpell.type}
+                  </p>
+                </div>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-500">
-                  Era
+                  Ideal For
                 </label>
                 <p className="mt-1">
-                  <span className="px-2 py-1 text-sm bg-blue-100 text-blue-800 rounded">
-                    {selectedRishi.era}
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+                    {selectedSpell.idealFor}
                   </span>
                 </p>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-500">
-                  Biography
+                  Description
                 </label>
                 <p className="mt-1 text-gray-700 whitespace-pre-line">
-                  {selectedRishi.biography}
+                  {selectedSpell.description}
                 </p>
               </div>
-              {selectedRishi.createdAt && (
+
+              {selectedSpell.createdAt && (
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
                     Added On
                   </label>
                   <p className="mt-1 text-sm text-gray-600">
-                    {new Date(selectedRishi.createdAt).toLocaleDateString(
+                    {new Date(selectedSpell.createdAt).toLocaleDateString(
                       "en-IN",
                       {
                         day: "numeric",
@@ -697,12 +783,12 @@ const AdminRashi: React.FC = () => {
       )}
 
       {/* Edit Modal */}
-      {showEditModal && selectedRishi && (
+      {showEditModal && selectedSpell && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900">
-                Edit Rishi
+                Edit Spell Type
               </h3>
               <button
                 onClick={() => setShowEditModal(false)}
@@ -726,44 +812,65 @@ const AdminRashi: React.FC = () => {
             <div className="px-6 py-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Name
+                  Spell Type Name
                 </label>
                 <input
                   type="text"
-                  value={formData.name}
+                  value={formData.type}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setFormData({ ...formData, type: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Era
+                  Icon
                 </label>
-                <select
-                  value={formData.era}
+                <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto p-2 border rounded-lg">
+                  {iconOptions.map((icon) => (
+                    <button
+                      key={icon.value}
+                      type="button"
+                      onClick={() =>
+                        setFormData({ ...formData, icon: icon.value })
+                      }
+                      className={`p-2 border rounded-lg flex flex-col items-center ${
+                        formData.icon === icon.value
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-blue-300"
+                      }`}
+                    >
+                      <span className="text-xl">{icon.emoji}</span>
+                      <span className="text-xs">{icon.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ideal For
+                </label>
+                <input
+                  type="text"
+                  value={formData.idealFor}
                   onChange={(e) =>
-                    setFormData({ ...formData, era: e.target.value })
+                    setFormData({ ...formData, idealFor: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select Era</option>
-                  {eraOptions.map((era) => (
-                    <option key={era} value={era}>
-                      {era}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Biography
+                  Description
                 </label>
                 <textarea
-                  value={formData.biography}
+                  value={formData.description}
                   onChange={(e) =>
-                    setFormData({ ...formData, biography: e.target.value })
+                    setFormData({ ...formData, description: e.target.value })
                   }
                   rows={6}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -778,11 +885,11 @@ const AdminRashi: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={handleUpdateRishi}
+                onClick={handleUpdateSpell}
                 disabled={loading}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? "Updating..." : "Update Rishi"}
+                {loading ? "Updating..." : "Update Spell Type"}
               </button>
             </div>
           </div>
@@ -790,17 +897,17 @@ const AdminRashi: React.FC = () => {
       )}
 
       {/* Delete Modal */}
-      {showDeleteModal && selectedRishi && (
+      {showDeleteModal && selectedSpell && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Delete Rishi
+                Delete Spell Type
               </h3>
               <p className="text-gray-500">
                 Are you sure you want to delete{" "}
                 <span className="font-semibold text-gray-900">
-                  {selectedRishi.name}
+                  {selectedSpell.type}
                 </span>
                 ? This action cannot be undone.
               </p>
@@ -829,7 +936,7 @@ const AdminRashi: React.FC = () => {
         <div
           className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg ${
             showToast.type === "success" ? "bg-green-500" : "bg-red-500"
-          } text-white animate-fade-in-up`}
+          } text-white animate-fade-in-up z-50`}
         >
           <div className="flex items-center gap-2">
             {showToast.type === "success" ? (
@@ -869,4 +976,4 @@ const AdminRashi: React.FC = () => {
   );
 };
 
-export default AdminRashi;
+export default AdminSpells;

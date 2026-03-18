@@ -278,7 +278,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/dashboard/aboutus",
       icon: <FiPackage />,
       color: "text-yellow-400",
-    
     },
     {
       name: "Products",
@@ -307,6 +306,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       color: "text-pink-400",
     },
     {
+      name: "Services",
+      href: "/dashboard/services",
+      icon: <FiUsers />,
+      color: "text-green-300",
+      submenu: [
+        { name: "Spells", href: "/dashboard/services/spells" },
+        { name: "Reading", href: "/dashboard/services/reading" },
+      ],
+    },
+    {
       name: "FAQ",
       href: "/dashboard/faq",
       icon: <FiHelpCircle />,
@@ -316,15 +325,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: "View FAQ", href: "/dashboard/faq/view" },
       ],
     },
+    // {
+    //   name: "Horoscope",
+    //   href: "/dashboard/horoscope",
+    //   icon: <FiCalendar />,
+    //   color: "text-indigo-400",
+    //   submenu: [
+    //     { name: "Add Horoscope", href: "/dashboard/horoscope/add" },
+    //     { name: "View Horoscope", href: "/dashboard/horoscope/view" },
+    //   ],
+    // },
+
     {
-      name: "Horoscope",
-      href: "/dashboard/horoscope",
-      icon: <FiCalendar />,
-      color: "text-indigo-400",
-      submenu: [
-        { name: "Add Horoscope", href: "/dashboard/horoscope/add" },
-        { name: "View Horoscope", href: "/dashboard/horoscope/view" },
-      ],
+      name: "Blog",
+      href: "/dashboard/blog",
+      icon: <FiStar />,
+      color: "text-pink-300",
     },
     {
       name: "Astrologer",
@@ -336,9 +352,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: "View Astrologer", href: "/dashboard/astrologer/view" },
       ],
     },
+    // {
+    //   name: "Zodiacs",
+    //   href: "/dashboard/zodiacs",
+    //   icon: <FiStar />,
+    //   color: "text-purple-300",
+    // },
     {
-      name: "Zodiacs",
-      href: "/dashboard/zodiacs",
+      name: "Horoscope Main",
+      href: "/dashboard/horoscopemain",
       icon: <FiStar />,
       color: "text-purple-300",
     },
@@ -408,16 +430,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: "View Benefit", href: "/dashboard/benefit/view" },
       ],
     },
-    {
-      name: "Rashi",
-      href: "/dashboard/rashi",
-      icon: <FiStar />,
-      color: "text-pink-300",
-      submenu: [
-        { name: "Add Rashi", href: "/dashboard/rashi/add" },
-        { name: "View Rashi", href: "/dashboard/rashi/view" },
-      ],
-    },
+    // {
+    //   name: "Rashi",
+    //   href: "/dashboard/rashi",
+    //   icon: <FiStar />,
+    //   color: "text-pink-300",
+    //   // submenu: [
+    //   //   { name: "Add Rashi", href: "/dashboard/rashi/add" },
+    //   //   { name: "View Rashi", href: "/dashboard/rashi/view" },
+    //   // ],
+    // },
   ];
 
   const isActive = (item: NavItem): boolean => {
