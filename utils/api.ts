@@ -1,8 +1,8 @@
 // utils/api.ts
 import axios, { AxiosError, AxiosResponse } from "axios";
 
-// const API_BASE_URL = "https://osheenoraclebackend02-4oz7.onrender.com/api";
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://osheenoraclebackend02-4oz7.onrender.com/api";
+// const API_BASE_URL = "http://localhost:5000/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
