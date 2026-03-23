@@ -262,6 +262,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navItems: NavItem[] = [
     { name: "Dashboard", href: "/", icon: <FiHome />, color: "text-blue-400" },
     {
+      name: "Home",
+      href: "/dashboard/home",
+      icon: <FiStar />,
+      color: "text-pink-300",
+    },
+    {
       name: "Analytics",
       href: "/dashboard/analytics",
       icon: <FiBarChart2 />,
