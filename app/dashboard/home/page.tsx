@@ -1,15 +1,61 @@
 "use client";
 
-import homeAPI, { Catalogue, DiscoverPath, ExpertGuide, HomeData, MediaSpotlight } from "@/utils/home.api";
-import { CheckCircle, Edit2, Plus, Star, Trash2, Upload, X } from "lucide-react";
+import homeAPI, {
+  Catalogue,
+  DiscoverPath,
+  ExpertGuide,
+  HomeData,
+  MediaSpotlight,
+  DiscoverSection,
+  AchievementsSection,
+  CatalogueItem,
+} from "@/utils/home.api";
+import {
+  CheckCircle,
+  Edit2,
+  Plus,
+  Star,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import Image from "next/image";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ChangeEvent } from "react";
+
+// ==================== TYPES ====================
 
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
+
+interface DiscoverPathItem extends DiscoverPath {
+  _id: string;
+}
+
+interface MediaSpotlightItem extends MediaSpotlight {
+  _id: string;
+}
+
+interface ExpertGuideItem extends ExpertGuide {
+  _id: string;
+}
+
+interface CatalogueItemType extends CatalogueItem {
+  _id: string;
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+
+const ensureFields = <T extends Record<string, unknown>>(
+  data: Partial<T>,
+  defaults: T,
+): T => {
+  return { ...defaults, ...data } as T;
+};
+
+// ==================== TAB PANEL ====================
 
 const TabPanel = ({ children, value, index }: TabPanelProps) => {
   return (
@@ -23,39 +69,50 @@ const TabPanel = ({ children, value, index }: TabPanelProps) => {
   );
 };
 
+// ==================== MAIN COMPONENT ====================
+
 const Home: React.FC = () => {
-  const [activeTab, setActiveTab] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
   const [homeData, setHomeData] = useState<HomeData | null>(null);
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openDialog, setOpenDialog] = useState<boolean>(false);
   const [dialogType, setDialogType] = useState<"add" | "edit">("add");
   const [dialogSection, setDialogSection] = useState<string>("");
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [formData, setFormData] = useState<any>({});
-  const [snackbar, setSnackbar] = useState({
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    type: "success" | "error" | "info" | "warning";
+  }>({
     open: false,
     message: "",
-    type: "success" as "success" | "error" | "info" | "warning",
+    type: "success",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageUrlInput, setImageUrlInput] = useState<string>("");
+  const [imageSource, setImageSource] = useState<"file" | "url">("file");
 
   useEffect(() => {
     fetchHomeData();
   }, []);
 
-  const fetchHomeData = async () => {
+  const fetchHomeData = async (): Promise<void> => {
     try {
       setLoading(true);
       const response = await homeAPI.getAllHomeData();
-      if (response.success) {
+      if (response.success && response.data) {
         setHomeData(response.data);
       } else {
         showSnackbar(response.message || "Error fetching home data", "error");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching home data:", error);
-      showSnackbar(error?.message || "Error fetching home data", "error");
+      showSnackbar(
+        error instanceof Error ? error.message : "Error fetching home data",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -64,12 +121,12 @@ const Home: React.FC = () => {
   const showSnackbar = (
     message: string,
     type: "success" | "error" | "info" | "warning",
-  ) => {
+  ): void => {
     setSnackbar({ open: true, message, type });
-    setTimeout(() => setSnackbar({ ...snackbar, open: false }), 6000);
+    setTimeout(() => setSnackbar((prev) => ({ ...prev, open: false })), 6000);
   };
 
-  const handleTabChange = (index: number) => {
+  const handleTabChange = (index: number): void => {
     setActiveTab(index);
   };
 
@@ -77,7 +134,7 @@ const Home: React.FC = () => {
     section: string,
     type: "add" | "edit",
     item?: any,
-  ) => {
+  ): void => {
     setDialogSection(section);
     setDialogType(type);
     setSelectedItem(item || null);
@@ -88,49 +145,56 @@ const Home: React.FC = () => {
     }
     setImageFile(null);
     setImagePreview("");
+    setImageUrlInput("");
+    setImageSource("file");
     setOpenDialog(true);
   };
 
-  const getDefaultFormData = (section: string) => {
+  const getDefaultFormData = (section: string): Record<string, unknown> => {
     switch (section) {
       case "discoverPath":
-        return { title: "", description: "", order: 0, isActive: true };
+        return {
+          title: "",
+          description: "",
+          image: "",
+          order: 0,
+          isActive: true,
+        };
       case "mediaSpotlight":
-        return { title: "", logo: "", link: "", order: 0, isActive: true };
+        return {
+          title: "",
+          logo: "",
+          link: "",
+          image: "",
+          order: 0,
+          isActive: true,
+        };
       case "catalogue":
         return {
           title: "",
           description: "",
-          details: {
-            bookYourReading: {
-              title: "Book Your Reading",
-              description: "",
-              price: 0,
-              duration: "60 mins",
-              buttonText: "Book Now",
-            },
-            keyTraits: [],
-            benefits: [],
-            completePackage: {
-              title: "Complete Package",
-              includes: [],
-              price: 0,
-              discountPrice: 0,
-            },
-          },
+          image: "",
+          price: "0",
+          rating: 4.5,
+          traits: [] as string[],
+          benefits: [] as string[],
+          readingIncludes: [] as string[],
+          strengths: [] as string[],
+          challenges: [] as string[],
           order: 0,
           isActive: true,
         };
       case "expertGuide":
         return {
           name: "",
+          image: "",
           rating: 4.8,
           reviews: 892,
           satisfactionRate: 92,
           expertise: "",
           experience: "15+ years",
-          languages: [],
-          expertiseAreas: [],
+          languages: [] as string[],
+          expertiseAreas: [] as string[],
           isVerified: true,
           order: 0,
           isActive: true,
@@ -140,132 +204,222 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = (): void => {
     setOpenDialog(false);
     setSelectedItem(null);
     setFormData({});
     setImageFile(null);
     setImagePreview("");
+    setImageUrlInput("");
+    setImageSource("file");
   };
 
-  const handleFormChange = (field: string, value: any) => {
-    setFormData({ ...formData, [field]: value });
-  };
-
-  const handleNestedFormChange = (
-    parent: string,
-    field: string,
-    value: any,
-  ) => {
-    setFormData({
-      ...formData,
-      [parent]: {
-        ...formData[parent],
-        [field]: value,
-      },
-    });
+  const handleFormChange = (field: string, value: unknown): void => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleArrayFieldChange = (
-    parent: string,
-    arrayField: string,
-    index: number,
     field: string,
-    value: string,
-  ) => {
-    const newArray = [...(formData[parent]?.[arrayField] || [])];
-    newArray[index] = { ...newArray[index], [field]: value };
-    setFormData({
-      ...formData,
-      [parent]: {
-        ...formData[parent],
-        [arrayField]: newArray,
-      },
-    });
-  };
-
-  const addArrayItem = (parent: string, arrayField: string, newItem: any) => {
-    setFormData({
-      ...formData,
-      [parent]: {
-        ...formData[parent],
-        [arrayField]: [...(formData[parent]?.[arrayField] || []), newItem],
-      },
-    });
-  };
-
-  const removeArrayItem = (
-    parent: string,
-    arrayField: string,
     index: number,
-  ) => {
-    const newArray = [...(formData[parent]?.[arrayField] || [])];
-    newArray.splice(index, 1);
-    setFormData({
-      ...formData,
-      [parent]: {
-        ...formData[parent],
-        [arrayField]: newArray,
-      },
-    });
+    subField: string,
+    value: string,
+  ): void => {
+    const currentArray =
+      (formData[field] as Array<Record<string, string>>) || [];
+    const newArray = [...currentArray];
+    if (!newArray[index]) {
+      newArray[index] = {};
+    }
+    newArray[index] = { ...newArray[index], [subField]: value };
+    setFormData((prev) => ({ ...prev, [field]: newArray }));
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const addArrayItem = (
+    field: string,
+    newItem: Record<string, string>,
+  ): void => {
+    const currentArray =
+      (formData[field] as Array<Record<string, string>>) || [];
+    setFormData((prev) => ({ ...prev, [field]: [...currentArray, newItem] }));
+  };
+
+  const removeArrayItem = (field: string, index: number): void => {
+    const currentArray =
+      (formData[field] as Array<Record<string, string>>) || [];
+    const newArray = currentArray.filter((_, i) => i !== index);
+    setFormData((prev) => ({ ...prev, [field]: newArray }));
+  };
+
+  const handleImageSelect = (e: ChangeEvent<HTMLInputElement>): void => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setImageFile(file);
+      setImageSource("file");
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      setFormData((prev) => ({ ...prev, image: "" }));
+      setImageUrlInput("");
     }
   };
 
-  const handleSubmit = async () => {
+  const handleImageUrlInput = (url: string): void => {
+    setImageUrlInput(url);
+    setImageSource("url");
+    setImagePreview(url);
+    setImageFile(null);
+    setFormData((prev) => ({ ...prev, image: url }));
+  };
+
+  const getFinalImageValue = (): string => {
+    if (imageSource === "url" && imageUrlInput) {
+      return imageUrlInput;
+    }
+    if (imageFile) {
+      return "";
+    }
+    return (formData.image as string) || "";
+  };
+
+  const handleSubmit = async (): Promise<void> => {
     try {
       let response;
+      const imageValue = getFinalImageValue();
+
       switch (dialogSection) {
-        case "discoverPath":
+        case "discoverPath": {
+          const defaults = {
+            title: "",
+            description: "",
+            image: "",
+            order: 0,
+            isActive: true,
+          };
+          const data = ensureFields(
+            { ...formData, image: imageValue },
+            defaults,
+          );
           if (dialogType === "add") {
-            response = await homeAPI.addDiscoverPath(formData);
+            response = await homeAPI.addDiscoverPath(
+              data as Omit<DiscoverPath, "_id">,
+            );
           } else {
             response = await homeAPI.updateDiscoverPath(
-              selectedItem._id,
-              formData,
+              (selectedItem?._id as string) || "",
+              data,
             );
           }
           break;
-        case "mediaSpotlight":
+        }
+        case "mediaSpotlight": {
+          const defaults = {
+            title: "",
+            logo: "",
+            link: "",
+            image: "",
+            order: 0,
+            isActive: true,
+          };
+          const data = ensureFields(
+            { ...formData, image: imageValue },
+            defaults,
+          );
           if (dialogType === "add" && imageFile) {
-            response = await homeAPI.addMediaSpotlight(imageFile, formData);
-          } else if (dialogType === "edit") {
+            response = await homeAPI.addMediaSpotlight(
+              imageFile,
+              data as {
+                title: string;
+                logo?: string;
+                link?: string;
+                order?: number;
+              },
+            );
+          } else if (dialogType === "add" && imageValue) {
+            const formDataToSend = new FormData();
+            formDataToSend.append("title", data.title as string);
+            formDataToSend.append("logo", (data.logo as string) || "");
+            formDataToSend.append("link", (data.link as string) || "");
+            formDataToSend.append("order", String(data.order || 0));
+            formDataToSend.append("imageUrl", imageValue);
+            const token = localStorage.getItem("token");
+            const fetchResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/admin/media-spotlight`,
+              {
+                method: "POST",
+                headers: { Authorization: token ? `Bearer ${token}` : "" },
+                body: formDataToSend,
+              },
+            );
+            response = await fetchResponse.json();
+          } else {
             response = await homeAPI.updateMediaSpotlight(
-              selectedItem._id,
-              formData,
+              (selectedItem?._id as string) || "",
+              data,
             );
           }
           break;
-        case "catalogue":
+        }
+        case "catalogue": {
+          const transformedData = {
+            name: (formData.title as string) || "",
+            description: (formData.description as string) || "",
+            price: (formData.price as string) || "0",
+            rating: (formData.rating as number) || 4.5,
+            image: imageValue,
+            traits: (formData.traits as string[]) || [],
+            benefits: (formData.benefits as string[]) || [],
+            readingIncludes: (formData.readingIncludes as string[]) || [],
+            strengths: (formData.strengths as string[]) || [],
+            challenges: (formData.challenges as string[]) || [],
+            order: (formData.order as number) || 0,
+            isActive: (formData.isActive as boolean) !== false,
+          };
+
           if (dialogType === "add") {
-            response = await homeAPI.addCatalogue(formData);
+            response = await homeAPI.addCatalogue(transformedData);
           } else {
             response = await homeAPI.updateCatalogue(
-              selectedItem._id,
-              formData,
+              (selectedItem?._id as string) || "",
+              transformedData,
             );
           }
           break;
-        case "expertGuide":
+        }
+        case "expertGuide": {
+          const data = {
+            name: (formData.name as string) || "",
+            image: imageValue,
+            rating: (formData.rating as number) || 4.8,
+            reviews: (formData.reviews as number) || 892,
+            satisfactionRate: (formData.satisfactionRate as number) || 92,
+            expertise: (formData.expertise as string) || "",
+            experience: (formData.experience as string) || "15+ years",
+            languages: (formData.languages as string[]) || [],
+            expertiseAreas: (formData.expertiseAreas as string[]) || [],
+            isVerified: (formData.isVerified as boolean) !== false,
+            order: (formData.order as number) || 0,
+            isActive: (formData.isActive as boolean) !== false,
+            stats: {
+              professionalExperience:
+                (formData.experience as string) || "15+ years",
+              satisfiedClients: "4200+",
+            },
+          };
+
           if (dialogType === "add") {
-            response = await homeAPI.addExpertGuide(formData);
+            response = await homeAPI.addExpertGuide(
+              data as Omit<ExpertGuide, "_id">,
+            );
           } else {
             response = await homeAPI.updateExpertGuide(
-              selectedItem._id,
-              formData,
+              (selectedItem?._id as string) || "",
+              data,
             );
           }
           break;
+        }
         default:
           return;
       }
@@ -280,13 +434,16 @@ const Home: React.FC = () => {
       } else {
         showSnackbar(response?.message || "Operation failed", "error");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error submitting form:", error);
-      showSnackbar(error?.message || "Error submitting form", "error");
+      showSnackbar(
+        error instanceof Error ? error.message : "Error submitting form",
+        "error",
+      );
     }
   };
 
-  const handleDelete = async (section: string, id: string) => {
+  const handleDelete = async (section: string, id: string): Promise<void> => {
     if (window.confirm("Are you sure you want to delete this item?")) {
       try {
         let response;
@@ -313,14 +470,21 @@ const Home: React.FC = () => {
         } else {
           showSnackbar(response?.message || "Delete failed", "error");
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error deleting item:", error);
-        showSnackbar(error?.message || "Error deleting item", "error");
+        showSnackbar(
+          error instanceof Error ? error.message : "Error deleting item",
+          "error",
+        );
       }
     }
   };
 
-  const handleImageUpload = async (section: string, id: string, file: File) => {
+  const handleImageUpload = async (
+    section: string,
+    id: string,
+    file: File,
+  ): Promise<void> => {
     try {
       let response;
       switch (section) {
@@ -343,9 +507,12 @@ const Home: React.FC = () => {
       } else {
         showSnackbar(response?.message || "Upload failed", "error");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error uploading image:", error);
-      showSnackbar(error?.message || "Error uploading image", "error");
+      showSnackbar(
+        error instanceof Error ? error.message : "Error uploading image",
+        "error",
+      );
     }
   };
 
@@ -369,7 +536,6 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             Home Page Management
@@ -380,7 +546,6 @@ const Home: React.FC = () => {
           </p>
         </div>
 
-        {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="border-b border-gray-200">
             <nav className="flex overflow-x-auto">
@@ -400,7 +565,6 @@ const Home: React.FC = () => {
             </nav>
           </div>
 
-          {/* Discover Section Tab */}
           <TabPanel value={activeTab} index={0}>
             <DiscoverSectionEditor
               homeData={homeData}
@@ -408,21 +572,19 @@ const Home: React.FC = () => {
               showSnackbar={showSnackbar}
             />
           </TabPanel>
-
-          {/* Discover Your Path Tab */}
           <TabPanel value={activeTab} index={1}>
             <DiscoverPathEditor
-              data={homeData?.discoverYourPath || []}
+              data={(homeData?.discoverYourPath as DiscoverPathItem[]) || []}
               onAdd={() => handleOpenDialog("discoverPath", "add")}
-              onEdit={(item) => handleOpenDialog("discoverPath", "edit", item)}
-              onDelete={(id) => handleDelete("discoverPath", id)}
-              onImageUpload={(id, file) =>
+              onEdit={(item: DiscoverPathItem) =>
+                handleOpenDialog("discoverPath", "edit", item)
+              }
+              onDelete={(id: string) => handleDelete("discoverPath", id)}
+              onImageUpload={(id: string, file: File) =>
                 handleImageUpload("discoverPath", id, file)
               }
             />
           </TabPanel>
-
-          {/* Achievements Tab */}
           <TabPanel value={activeTab} index={2}>
             <AchievementsEditor
               homeData={homeData}
@@ -430,40 +592,38 @@ const Home: React.FC = () => {
               showSnackbar={showSnackbar}
             />
           </TabPanel>
-
-          {/* Media Spotlight Tab */}
           <TabPanel value={activeTab} index={3}>
             <MediaSpotlightEditor
-              data={homeData?.mediaSpotlight || []}
+              data={(homeData?.mediaSpotlight as MediaSpotlightItem[]) || []}
               onAdd={() => handleOpenDialog("mediaSpotlight", "add")}
-              onEdit={(item) =>
+              onEdit={(item: MediaSpotlightItem) =>
                 handleOpenDialog("mediaSpotlight", "edit", item)
               }
-              onDelete={(id) => handleDelete("mediaSpotlight", id)}
+              onDelete={(id: string) => handleDelete("mediaSpotlight", id)}
             />
           </TabPanel>
-
-          {/* Catalogue Tab */}
           <TabPanel value={activeTab} index={4}>
             <CatalogueEditor
-              data={homeData?.catalogue || []}
+              data={(homeData?.catalogue as CatalogueItemType[]) || []}
               onAdd={() => handleOpenDialog("catalogue", "add")}
-              onEdit={(item) => handleOpenDialog("catalogue", "edit", item)}
-              onDelete={(id) => handleDelete("catalogue", id)}
-              onImageUpload={(id, file) =>
+              onEdit={(item: CatalogueItemType) =>
+                handleOpenDialog("catalogue", "edit", item)
+              }
+              onDelete={(id: string) => handleDelete("catalogue", id)}
+              onImageUpload={(id: string, file: File) =>
                 handleImageUpload("catalogue", id, file)
               }
             />
           </TabPanel>
-
-          {/* Expert Guides Tab */}
           <TabPanel value={activeTab} index={5}>
             <ExpertGuidesEditor
-              data={homeData?.expertGuides || []}
+              data={(homeData?.expertGuides as ExpertGuideItem[]) || []}
               onAdd={() => handleOpenDialog("expertGuide", "add")}
-              onEdit={(item) => handleOpenDialog("expertGuide", "edit", item)}
-              onDelete={(id) => handleDelete("expertGuide", id)}
-              onImageUpload={(id, file) =>
+              onEdit={(item: ExpertGuideItem) =>
+                handleOpenDialog("expertGuide", "edit", item)
+              }
+              onDelete={(id: string) => handleDelete("expertGuide", id)}
+              onImageUpload={(id: string, file: File) =>
                 handleImageUpload("expertGuide", id, file)
               }
             />
@@ -491,13 +651,14 @@ const Home: React.FC = () => {
                 section={dialogSection}
                 formData={formData}
                 onFormChange={handleFormChange}
-                onNestedChange={handleNestedFormChange}
                 onArrayItemAdd={addArrayItem}
                 onArrayItemRemove={removeArrayItem}
                 onArrayItemChange={handleArrayFieldChange}
-                imageFile={imageFile}
                 imagePreview={imagePreview}
+                imageUrlInput={imageUrlInput}
+                imageSource={imageSource}
                 onImageSelect={handleImageSelect}
+                onImageUrlInput={handleImageUrlInput}
               />
             </div>
             <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
@@ -540,60 +701,147 @@ const Home: React.FC = () => {
   );
 };
 
-// ==================== SUB-COMPONENTS ====================
+// ==================== DISCOVER SECTION EDITOR ====================
 
 const DiscoverSectionEditor: React.FC<{
   homeData: HomeData | null;
   onUpdate: () => void;
-  showSnackbar: (message: string, type: any) => void;
+  showSnackbar: (
+    message: string,
+    type: "success" | "error" | "info" | "warning",
+  ) => void;
 }> = ({ homeData, onUpdate, showSnackbar }) => {
-  const [osheenMaa, setOsheenMaa] = useState(
-    homeData?.discoverSection?.osheenMaa,
+  const [osheenMaa, setOsheenMaa] = useState<{
+    title: string;
+    description: string;
+    image: string;
+    link: string;
+  }>(
+    homeData?.discoverSection?.osheenMaa || {
+      title: "",
+      description: "",
+      image: "",
+      link: "",
+    },
   );
-  const [osheenOracle, setOsheenOracle] = useState(
-    homeData?.discoverSection?.osheenOracle,
+  const [osheenOracle, setOsheenOracle] = useState<{
+    title: string;
+    description: string;
+    image: string;
+    link: string;
+  }>(
+    homeData?.discoverSection?.osheenOracle || {
+      title: "",
+      description: "",
+      image: "",
+      link: "",
+    },
   );
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [maaImageFile, setMaaImageFile] = useState<File | null>(null);
+  const [maaImagePreview, setMaaImagePreview] = useState<string>("");
+  const [maaImageSource, setMaaImageSource] = useState<"file" | "url">("file");
+  const [maaImageUrl, setMaaImageUrl] = useState<string>("");
+  const [oracleImageFile, setOracleImageFile] = useState<File | null>(null);
+  const [oracleImagePreview, setOracleImagePreview] = useState<string>("");
+  const [oracleImageSource, setOracleImageSource] = useState<"file" | "url">(
+    "file",
+  );
+  const [oracleImageUrl, setOracleImageUrl] = useState<string>("");
 
   useEffect(() => {
-    setOsheenMaa(homeData?.discoverSection?.osheenMaa);
-    setOsheenOracle(homeData?.discoverSection?.osheenOracle);
+    if (homeData?.discoverSection) {
+      setOsheenMaa(homeData.discoverSection.osheenMaa);
+      setOsheenOracle(homeData.discoverSection.osheenOracle);
+    }
   }, [homeData]);
 
-  const handleSave = async () => {
+  const handleMaaImageSelect = (e: ChangeEvent<HTMLInputElement>): void => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setMaaImageFile(file);
+      setMaaImageSource("file");
+      const reader = new FileReader();
+      reader.onloadend = () => setMaaImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+      setMaaImageUrl("");
+      setOsheenMaa((prev) => ({ ...prev, image: "" }));
+    }
+  };
+
+  const handleMaaImageUrl = (url: string): void => {
+    setMaaImageUrl(url);
+    setMaaImageSource("url");
+    setMaaImagePreview(url);
+    setMaaImageFile(null);
+    setOsheenMaa((prev) => ({ ...prev, image: url }));
+  };
+
+  const handleOracleImageSelect = (e: ChangeEvent<HTMLInputElement>): void => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setOracleImageFile(file);
+      setOracleImageSource("file");
+      const reader = new FileReader();
+      reader.onloadend = () => setOracleImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+      setOracleImageUrl("");
+      setOsheenOracle((prev) => ({ ...prev, image: "" }));
+    }
+  };
+
+  const handleOracleImageUrl = (url: string): void => {
+    setOracleImageUrl(url);
+    setOracleImageSource("url");
+    setOracleImagePreview(url);
+    setOracleImageFile(null);
+    setOsheenOracle((prev) => ({ ...prev, image: url }));
+  };
+
+  const handleSave = async (): Promise<void> => {
     try {
       setSaving(true);
-      const response = await homeAPI.updateDiscoverSection({
-        osheenMaa,
-        osheenOracle,
-      });
+
+      const updateData = {
+        osheenMaa: {
+          title: osheenMaa.title || "",
+          description: osheenMaa.description || "",
+          image:
+            maaImageSource === "file" && maaImageFile
+              ? ""
+              : maaImageUrl || osheenMaa.image || "",
+          link: osheenMaa.link || "",
+        },
+        osheenOracle: {
+          title: osheenOracle.title || "",
+          description: osheenOracle.description || "",
+          image:
+            oracleImageSource === "file" && oracleImageFile
+              ? ""
+              : oracleImageUrl || osheenOracle.image || "",
+          link: osheenOracle.link || "",
+        },
+      };
+
+      const response = await homeAPI.updateDiscoverSection(updateData);
+
       if (response.success) {
+        if (maaImageFile) {
+          await homeAPI.uploadDiscoverImage(maaImageFile, "osheenMaa");
+        }
+        if (oracleImageFile) {
+          await homeAPI.uploadDiscoverImage(oracleImageFile, "osheenOracle");
+        }
         showSnackbar("Discover section updated successfully", "success");
         onUpdate();
       } else {
         showSnackbar(response.message || "Update failed", "error");
       }
     } catch (error) {
+      console.error("Error:", error);
       showSnackbar("Error updating discover section", "error");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleImageUpload = async (
-    type: "osheenMaa" | "osheenOracle",
-    file: File,
-  ) => {
-    try {
-      const response = await homeAPI.uploadDiscoverImage(file, type);
-      if (response.success) {
-        showSnackbar("Image uploaded successfully", "success");
-        onUpdate();
-      } else {
-        showSnackbar(response.message || "Upload failed", "error");
-      }
-    } catch (error) {
-      showSnackbar("Error uploading image", "error");
     }
   };
 
@@ -607,9 +855,9 @@ const DiscoverSectionEditor: React.FC<{
           </label>
           <input
             type="text"
-            value={osheenMaa?.title || ""}
+            value={osheenMaa.title}
             onChange={(e) =>
-              setOsheenMaa({ ...osheenMaa!, title: e.target.value })
+              setOsheenMaa({ ...osheenMaa, title: e.target.value })
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
@@ -620,9 +868,9 @@ const DiscoverSectionEditor: React.FC<{
           </label>
           <textarea
             rows={3}
-            value={osheenMaa?.description || ""}
+            value={osheenMaa.description}
             onChange={(e) =>
-              setOsheenMaa({ ...osheenMaa!, description: e.target.value })
+              setOsheenMaa({ ...osheenMaa, description: e.target.value })
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
@@ -633,39 +881,59 @@ const DiscoverSectionEditor: React.FC<{
           </label>
           <input
             type="text"
-            value={osheenMaa?.link || ""}
+            value={osheenMaa.link}
             onChange={(e) =>
-              setOsheenMaa({ ...osheenMaa!, link: e.target.value })
+              setOsheenMaa({ ...osheenMaa, link: e.target.value })
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
         <div>
-          {osheenMaa?.image && (
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Image
+          </label>
+          <div className="flex gap-2 mb-2">
+            <button
+              onClick={() => setMaaImageSource("file")}
+              className={`px-3 py-1 text-sm rounded ${maaImageSource === "file" ? "bg-purple-600 text-white" : "bg-gray-200"}`}
+            >
+              Upload File
+            </button>
+            <button
+              onClick={() => setMaaImageSource("url")}
+              className={`px-3 py-1 text-sm rounded ${maaImageSource === "url" ? "bg-purple-600 text-white" : "bg-gray-200"}`}
+            >
+              Enter URL
+            </button>
+          </div>
+          {maaImageSource === "file" ? (
+            <label className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
+              <Upload className="w-4 h-4 mr-2" /> Upload Image
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleMaaImageSelect}
+              />
+            </label>
+          ) : (
+            <input
+              type="text"
+              placeholder="Enter image URL"
+              value={maaImageUrl}
+              onChange={(e) => handleMaaImageUrl(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            />
+          )}
+          {(maaImagePreview || osheenMaa.image) && (
             <div className="mt-2">
-              <Image
-                src={osheenMaa.image}
-                alt="Osheen MAA"
+              <img
+                src={maaImagePreview || osheenMaa.image}
+                alt="Preview"
                 className="w-full max-h-48 object-cover rounded-lg"
-                width={300}
-                height={300}
               />
             </div>
           )}
-          <label className="mt-2 inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Image
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files?.[0]) {
-                  handleImageUpload("osheenMaa", e.target.files[0]);
-                }
-              }}
-            />
-          </label>
         </div>
       </div>
 
@@ -677,9 +945,9 @@ const DiscoverSectionEditor: React.FC<{
           </label>
           <input
             type="text"
-            value={osheenOracle?.title || ""}
+            value={osheenOracle.title}
             onChange={(e) =>
-              setOsheenOracle({ ...osheenOracle!, title: e.target.value })
+              setOsheenOracle({ ...osheenOracle, title: e.target.value })
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
@@ -690,9 +958,9 @@ const DiscoverSectionEditor: React.FC<{
           </label>
           <textarea
             rows={3}
-            value={osheenOracle?.description || ""}
+            value={osheenOracle.description}
             onChange={(e) =>
-              setOsheenOracle({ ...osheenOracle!, description: e.target.value })
+              setOsheenOracle({ ...osheenOracle, description: e.target.value })
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
@@ -703,37 +971,59 @@ const DiscoverSectionEditor: React.FC<{
           </label>
           <input
             type="text"
-            value={osheenOracle?.link || ""}
+            value={osheenOracle.link}
             onChange={(e) =>
-              setOsheenOracle({ ...osheenOracle!, link: e.target.value })
+              setOsheenOracle({ ...osheenOracle, link: e.target.value })
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
         <div>
-          {osheenOracle?.image && (
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Image
+          </label>
+          <div className="flex gap-2 mb-2">
+            <button
+              onClick={() => setOracleImageSource("file")}
+              className={`px-3 py-1 text-sm rounded ${oracleImageSource === "file" ? "bg-purple-600 text-white" : "bg-gray-200"}`}
+            >
+              Upload File
+            </button>
+            <button
+              onClick={() => setOracleImageSource("url")}
+              className={`px-3 py-1 text-sm rounded ${oracleImageSource === "url" ? "bg-purple-600 text-white" : "bg-gray-200"}`}
+            >
+              Enter URL
+            </button>
+          </div>
+          {oracleImageSource === "file" ? (
+            <label className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
+              <Upload className="w-4 h-4 mr-2" /> Upload Image
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleOracleImageSelect}
+              />
+            </label>
+          ) : (
+            <input
+              type="text"
+              placeholder="Enter image URL"
+              value={oracleImageUrl}
+              onChange={(e) => handleOracleImageUrl(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            />
+          )}
+          {(oracleImagePreview || osheenOracle.image) && (
             <div className="mt-2">
               <img
-                src={osheenOracle.image}
-                alt="Osheen Oracle"
+                src={oracleImagePreview || osheenOracle.image}
+                alt="Preview"
                 className="w-full max-h-48 object-cover rounded-lg"
               />
             </div>
           )}
-          <label className="mt-2 inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Image
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files?.[0]) {
-                  handleImageUpload("osheenOracle", e.target.files[0]);
-                }
-              }}
-            />
-          </label>
         </div>
       </div>
 
@@ -750,10 +1040,12 @@ const DiscoverSectionEditor: React.FC<{
   );
 };
 
+// ==================== DISCOVER PATH EDITOR ====================
+
 const DiscoverPathEditor: React.FC<{
-  data: DiscoverPath[];
+  data: DiscoverPathItem[];
   onAdd: () => void;
-  onEdit: (item: DiscoverPath) => void;
+  onEdit: (item: DiscoverPathItem) => void;
   onDelete: (id: string) => void;
   onImageUpload: (id: string, file: File) => void;
 }> = ({ data, onAdd, onEdit, onDelete, onImageUpload }) => {
@@ -765,11 +1057,9 @@ const DiscoverPathEditor: React.FC<{
           onClick={onAdd}
           className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New
+          <Plus className="w-4 h-4 mr-2" /> Add New
         </button>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {data.map((item) => (
           <div
@@ -783,7 +1073,6 @@ const DiscoverPathEditor: React.FC<{
                 className="w-full h-48 object-cover"
                 width={300}
                 height={300}
-
               />
             )}
             <div className="p-4">
@@ -795,11 +1084,7 @@ const DiscoverPathEditor: React.FC<{
               </p>
               <div className="mt-2">
                 <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    item.isActive
-                      ? "bg-green-100 text-green-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
                 >
                   {item.isActive ? "Active" : "Inactive"}
                 </span>
@@ -810,27 +1095,23 @@ const DiscoverPathEditor: React.FC<{
                 onClick={() => onEdit(item)}
                 className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
               >
-                <Edit2 className="w-4 h-4 mr-1" />
-                Edit
+                <Edit2 className="w-4 h-4 mr-1" /> Edit
               </button>
               <button
-                onClick={() => onDelete(item._id!)}
+                onClick={() => onDelete(item._id)}
                 className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition"
               >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete
+                <Trash2 className="w-4 h-4 mr-1" /> Delete
               </button>
               <label className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer">
-                <Upload className="w-4 h-4 mr-1" />
-                Upload
+                <Upload className="w-4 h-4 mr-1" /> Upload
                 <input
                   type="file"
                   hidden
                   accept="image/*"
                   onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      onImageUpload(item._id!, e.target.files[0]);
-                    }
+                    if (e.target.files?.[0])
+                      onImageUpload(item._id, e.target.files[0]);
                   }}
                 />
               </label>
@@ -838,7 +1119,6 @@ const DiscoverPathEditor: React.FC<{
           </div>
         ))}
       </div>
-
       {data.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           No items found. Click Add New to create one.
@@ -848,32 +1128,119 @@ const DiscoverPathEditor: React.FC<{
   );
 };
 
+// ==================== ACHIEVEMENTS EDITOR ====================
+
 const AchievementsEditor: React.FC<{
   homeData: HomeData | null;
   onUpdate: () => void;
-  showSnackbar: (message: string, type: any) => void;
+  showSnackbar: (
+    message: string,
+    type: "success" | "error" | "info" | "warning",
+  ) => void;
 }> = ({ homeData, onUpdate, showSnackbar }) => {
-  const [title, setTitle] = useState(homeData?.achievements?.title || "");
-  const [description, setDescription] = useState(
+  const [title, setTitle] = useState<string>(
+    homeData?.achievements?.title || "",
+  );
+  const [description, setDescription] = useState<string>(
     homeData?.achievements?.description || "",
   );
-  const [stats, setStats] = useState(homeData?.achievements?.stats);
-  const [saving, setSaving] = useState(false);
+  const [stats, setStats] = useState(
+    homeData?.achievements?.stats || {
+      yearsOfExperience: 15,
+      satisfiedClients: 4200,
+      reviews: 892,
+      satisfactionRate: 92,
+    },
+  );
+  const [saving, setSaving] = useState<boolean>(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [imageSource, setImageSource] = useState<"file" | "url">("file");
 
   useEffect(() => {
-    setTitle(homeData?.achievements?.title || "");
-    setDescription(homeData?.achievements?.description || "");
-    setStats(homeData?.achievements?.stats);
+    if (homeData?.achievements) {
+      setTitle(homeData.achievements.title || "");
+      setDescription(homeData.achievements.description || "");
+      setStats(homeData.achievements.stats);
+    }
   }, [homeData]);
 
-  const handleSave = async () => {
+  const handleImageSelect = (e: ChangeEvent<HTMLInputElement>): void => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImageSource("file");
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+      setImageUrl("");
+    }
+  };
+
+  const handleImageUrl = (url: string): void => {
+    setImageUrl(url);
+    setImageSource("url");
+    setImagePreview(url);
+    setImageFile(null);
+  };
+
+  const handleAddImage = async (): Promise<void> => {
+    const caption = prompt("Enter image caption:");
+    if (!caption) return;
+
+    try {
+      let response;
+      if (imageSource === "file" && imageFile) {
+        response = await homeAPI.addAchievementImage(imageFile, caption);
+      } else if (imageSource === "url" && imageUrl) {
+        const blob = await fetch(imageUrl).then((r) => r.blob());
+        const file = new File([blob], "image.jpg", { type: blob.type });
+        response = await homeAPI.addAchievementImage(file, caption);
+      } else {
+        showSnackbar("Please select an image", "error");
+        return;
+      }
+
+      if (response?.success) {
+        showSnackbar("Image added successfully", "success");
+        setImageFile(null);
+        setImagePreview("");
+        setImageUrl("");
+        onUpdate();
+      } else {
+        showSnackbar(response?.message || "Add failed", "error");
+      }
+    } catch (error) {
+      showSnackbar("Error adding image", "error");
+    }
+  };
+
+  const handleDeleteImage = async (imageId: string): Promise<void> => {
+    if (window.confirm("Are you sure you want to delete this image?")) {
+      try {
+        const response = await homeAPI.deleteAchievementImage(imageId);
+        if (response?.success) {
+          showSnackbar("Image deleted successfully", "success");
+          onUpdate();
+        } else {
+          showSnackbar(response?.message || "Delete failed", "error");
+        }
+      } catch (error) {
+        showSnackbar("Error deleting image", "error");
+      }
+    }
+  };
+
+  const handleSave = async (): Promise<void> => {
     try {
       setSaving(true);
-      const response = await homeAPI.updateAchievements({
+      const updateData: Partial<AchievementsSection> = {
         title,
         description,
         stats,
-      });
+      };
+      const response = await homeAPI.updateAchievements(updateData);
       if (response.success) {
         showSnackbar("Achievements updated successfully", "success");
         onUpdate();
@@ -884,36 +1251,6 @@ const AchievementsEditor: React.FC<{
       showSnackbar("Error updating achievements", "error");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleAddImage = async (file: File, caption: string) => {
-    try {
-      const response = await homeAPI.addAchievementImage(file, caption);
-      if (response.success) {
-        showSnackbar("Image added successfully", "success");
-        onUpdate();
-      } else {
-        showSnackbar(response.message || "Add failed", "error");
-      }
-    } catch (error) {
-      showSnackbar("Error adding image", "error");
-    }
-  };
-
-  const handleDeleteImage = async (imageId: string) => {
-    if (window.confirm("Are you sure you want to delete this image?")) {
-      try {
-        const response = await homeAPI.deleteAchievementImage(imageId);
-        if (response.success) {
-          showSnackbar("Image deleted successfully", "success");
-          onUpdate();
-        } else {
-          showSnackbar(response.message || "Delete failed", "error");
-        }
-      } catch (error) {
-        showSnackbar("Error deleting image", "error");
-      }
     }
   };
 
@@ -951,10 +1288,10 @@ const AchievementsEditor: React.FC<{
             </label>
             <input
               type="number"
-              value={stats?.yearsOfExperience || 0}
+              value={stats.yearsOfExperience}
               onChange={(e) =>
                 setStats({
-                  ...stats!,
+                  ...stats,
                   yearsOfExperience: parseInt(e.target.value),
                 })
               }
@@ -967,10 +1304,10 @@ const AchievementsEditor: React.FC<{
             </label>
             <input
               type="number"
-              value={stats?.satisfiedClients || 0}
+              value={stats.satisfiedClients}
               onChange={(e) =>
                 setStats({
-                  ...stats!,
+                  ...stats,
                   satisfiedClients: parseInt(e.target.value),
                 })
               }
@@ -981,9 +1318,9 @@ const AchievementsEditor: React.FC<{
             <label className="block text-sm text-gray-600">Reviews</label>
             <input
               type="number"
-              value={stats?.reviews || 0}
+              value={stats.reviews}
               onChange={(e) =>
-                setStats({ ...stats!, reviews: parseInt(e.target.value) })
+                setStats({ ...stats, reviews: parseInt(e.target.value) })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
@@ -994,10 +1331,10 @@ const AchievementsEditor: React.FC<{
             </label>
             <input
               type="number"
-              value={stats?.satisfactionRate || 0}
+              value={stats.satisfactionRate}
               onChange={(e) =>
                 setStats({
-                  ...stats!,
+                  ...stats,
                   satisfactionRate: parseInt(e.target.value),
                 })
               }
@@ -1028,26 +1365,56 @@ const AchievementsEditor: React.FC<{
               </p>
             </div>
           ))}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center h-32 hover:border-purple-500 transition">
-            <label className="cursor-pointer text-center p-4">
-              <Plus className="w-6 h-6 text-gray-400 mx-auto" />
-              <span className="text-xs text-gray-500 mt-1 block">
-                Add Image
-              </span>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-purple-500 transition">
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => setImageSource("file")}
+                className={`px-3 py-1 text-sm rounded flex-1 ${imageSource === "file" ? "bg-purple-600 text-white" : "bg-gray-200"}`}
+              >
+                File
+              </button>
+              <button
+                onClick={() => setImageSource("url")}
+                className={`px-3 py-1 text-sm rounded flex-1 ${imageSource === "url" ? "bg-purple-600 text-white" : "bg-gray-200"}`}
+              >
+                URL
+              </button>
+            </div>
+            {imageSource === "file" ? (
+              <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-purple-500">
+                <div className="text-center">
+                  <Upload className="w-6 h-6 text-gray-400 mx-auto" />
+                  <span className="text-xs text-gray-500">Click to upload</span>
+                </div>
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                />
+              </label>
+            ) : (
               <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={(e) => {
-                  if (e.target.files?.[0]) {
-                    const caption = prompt("Enter image caption:");
-                    if (caption) {
-                      handleAddImage(e.target.files[0], caption);
-                    }
-                  }
-                }}
+                type="text"
+                placeholder="Enter image URL"
+                value={imageUrl}
+                onChange={(e) => handleImageUrl(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
-            </label>
+            )}
+            {imagePreview && (
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="mt-2 w-full h-24 object-cover rounded-lg"
+              />
+            )}
+            <button
+              onClick={handleAddImage}
+              className="mt-3 w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm"
+            >
+              Add Image
+            </button>
           </div>
         </div>
 
@@ -1065,10 +1432,12 @@ const AchievementsEditor: React.FC<{
   );
 };
 
+// ==================== MEDIA SPOTLIGHT EDITOR ====================
+
 const MediaSpotlightEditor: React.FC<{
-  data: MediaSpotlight[];
+  data: MediaSpotlightItem[];
   onAdd: () => void;
-  onEdit: (item: MediaSpotlight) => void;
+  onEdit: (item: MediaSpotlightItem) => void;
   onDelete: (id: string) => void;
 }> = ({ data, onAdd, onEdit, onDelete }) => {
   return (
@@ -1079,11 +1448,9 @@ const MediaSpotlightEditor: React.FC<{
           onClick={onAdd}
           className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New
+          <Plus className="w-4 h-4 mr-2" /> Add New
         </button>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {data.map((item) => (
           <div
@@ -1109,11 +1476,7 @@ const MediaSpotlightEditor: React.FC<{
               )}
               <div className="mt-2">
                 <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    item.isActive
-                      ? "bg-green-100 text-green-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
                 >
                   {item.isActive ? "Active" : "Inactive"}
                 </span>
@@ -1124,21 +1487,18 @@ const MediaSpotlightEditor: React.FC<{
                 onClick={() => onEdit(item)}
                 className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
               >
-                <Edit2 className="w-4 h-4 mr-1" />
-                Edit
+                <Edit2 className="w-4 h-4 mr-1" /> Edit
               </button>
               <button
-                onClick={() => onDelete(item._id!)}
+                onClick={() => onDelete(item._id)}
                 className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition"
               >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete
+                <Trash2 className="w-4 h-4 mr-1" /> Delete
               </button>
             </div>
           </div>
         ))}
       </div>
-
       {data.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           No media spotlight items found. Click Add New to create one.
@@ -1148,10 +1508,12 @@ const MediaSpotlightEditor: React.FC<{
   );
 };
 
+// ==================== CATALOGUE EDITOR ====================
+
 const CatalogueEditor: React.FC<{
-  data: Catalogue[];
+  data: CatalogueItemType[];
   onAdd: () => void;
-  onEdit: (item: Catalogue) => void;
+  onEdit: (item: CatalogueItemType) => void;
   onDelete: (id: string) => void;
   onImageUpload: (id: string, file: File) => void;
 }> = ({ data, onAdd, onEdit, onDelete, onImageUpload }) => {
@@ -1163,11 +1525,9 @@ const CatalogueEditor: React.FC<{
           onClick={onAdd}
           className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New
+          <Plus className="w-4 h-4 mr-2" /> Add New
         </button>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {data.map((item) => (
           <div
@@ -1177,24 +1537,25 @@ const CatalogueEditor: React.FC<{
             {item.image && (
               <img
                 src={item.image}
-                alt={item.title}
+                alt={item.name}
                 className="w-full h-48 object-cover"
               />
             )}
             <div className="p-4">
               <h4 className="text-lg font-semibold text-gray-900">
-                {item.title}
+                {item.name}
               </h4>
               <p className="text-gray-600 text-sm mt-1 line-clamp-2">
                 {item.description}
               </p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-purple-600 font-bold">₹{item.price}</span>
+                <span className="text-yellow-400">★</span>
+                <span>{item.rating}</span>
+              </div>
               <div className="mt-2">
                 <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    item.isActive
-                      ? "bg-green-100 text-green-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
                 >
                   {item.isActive ? "Active" : "Inactive"}
                 </span>
@@ -1205,27 +1566,23 @@ const CatalogueEditor: React.FC<{
                 onClick={() => onEdit(item)}
                 className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
               >
-                <Edit2 className="w-4 h-4 mr-1" />
-                Edit Details
+                <Edit2 className="w-4 h-4 mr-1" /> Edit
               </button>
               <button
-                onClick={() => onDelete(item._id!)}
+                onClick={() => onDelete(item._id)}
                 className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition"
               >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete
+                <Trash2 className="w-4 h-4 mr-1" /> Delete
               </button>
               <label className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer">
-                <Upload className="w-4 h-4 mr-1" />
-                Upload
+                <Upload className="w-4 h-4 mr-1" /> Upload
                 <input
                   type="file"
                   hidden
                   accept="image/*"
                   onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      onImageUpload(item._id!, e.target.files[0]);
-                    }
+                    if (e.target.files?.[0])
+                      onImageUpload(item._id, e.target.files[0]);
                   }}
                 />
               </label>
@@ -1233,7 +1590,6 @@ const CatalogueEditor: React.FC<{
           </div>
         ))}
       </div>
-
       {data.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           No catalogue items found. Click Add New to create one.
@@ -1243,10 +1599,12 @@ const CatalogueEditor: React.FC<{
   );
 };
 
+// ==================== EXPERT GUIDES EDITOR ====================
+
 const ExpertGuidesEditor: React.FC<{
-  data: ExpertGuide[];
+  data: ExpertGuideItem[];
   onAdd: () => void;
-  onEdit: (item: ExpertGuide) => void;
+  onEdit: (item: ExpertGuideItem) => void;
   onDelete: (id: string) => void;
   onImageUpload: (id: string, file: File) => void;
 }> = ({ data, onAdd, onEdit, onDelete, onImageUpload }) => {
@@ -1258,11 +1616,9 @@ const ExpertGuidesEditor: React.FC<{
           onClick={onAdd}
           className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New
+          <Plus className="w-4 h-4 mr-2" /> Add New
         </button>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {data.map((guide) => (
           <div
@@ -1283,8 +1639,7 @@ const ExpertGuidesEditor: React.FC<{
                 </h4>
                 {guide.isVerified && (
                   <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Verified
+                    <CheckCircle className="w-3 h-3 mr-1" /> Verified
                   </span>
                 )}
               </div>
@@ -1332,27 +1687,23 @@ const ExpertGuidesEditor: React.FC<{
                 onClick={() => onEdit(guide)}
                 className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
               >
-                <Edit2 className="w-4 h-4 mr-1" />
-                Edit
+                <Edit2 className="w-4 h-4 mr-1" /> Edit
               </button>
               <button
-                onClick={() => onDelete(guide._id!)}
+                onClick={() => onDelete(guide._id)}
                 className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition"
               >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete
+                <Trash2 className="w-4 h-4 mr-1" /> Delete
               </button>
               <label className="flex-1 inline-flex items-center justify-center px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer">
-                <Upload className="w-4 h-4 mr-1" />
-                Upload
+                <Upload className="w-4 h-4 mr-1" /> Upload
                 <input
                   type="file"
                   hidden
                   accept="image/*"
                   onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      onImageUpload(guide._id!, e.target.files[0]);
-                    }
+                    if (e.target.files?.[0])
+                      onImageUpload(guide._id, e.target.files[0]);
                   }}
                 />
               </label>
@@ -1360,7 +1711,6 @@ const ExpertGuidesEditor: React.FC<{
           </div>
         ))}
       </div>
-
       {data.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           No expert guides found. Click Add New to create one.
@@ -1370,37 +1720,37 @@ const ExpertGuidesEditor: React.FC<{
   );
 };
 
+// ==================== FORM DIALOG CONTENT ====================
+
 const FormDialogContent: React.FC<{
   section: string;
-  formData: any;
-  onFormChange: (field: string, value: any) => void;
-  onNestedChange: (parent: string, field: string, value: any) => void;
-  onArrayItemAdd: (parent: string, arrayField: string, newItem: any) => void;
-  onArrayItemRemove: (
-    parent: string,
-    arrayField: string,
-    index: number,
-  ) => void;
+  formData: Record<string, unknown>;
+  onFormChange: (field: string, value: unknown) => void;
+  onArrayItemAdd: (field: string, newItem: Record<string, string>) => void;
+  onArrayItemRemove: (field: string, index: number) => void;
   onArrayItemChange: (
-    parent: string,
-    arrayField: string,
-    index: number,
     field: string,
+    index: number,
+    subField: string,
     value: string,
   ) => void;
-  imageFile: File | null;
   imagePreview: string;
-  onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  imageUrlInput: string;
+  imageSource: "file" | "url";
+  onImageSelect: (e: ChangeEvent<HTMLInputElement>) => void;
+  onImageUrlInput: (url: string) => void;
 }> = ({
   section,
   formData,
   onFormChange,
-  onNestedChange,
   onArrayItemAdd,
   onArrayItemRemove,
   onArrayItemChange,
   imagePreview,
+  imageUrlInput,
+  imageSource,
   onImageSelect,
+  onImageUrlInput,
 }) => {
   switch (section) {
     case "discoverPath":
@@ -1412,9 +1762,9 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={formData.title || ""}
+              value={(formData.title as string) || ""}
               onChange={(e) => onFormChange("title", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
           <div>
@@ -1423,9 +1773,9 @@ const FormDialogContent: React.FC<{
             </label>
             <textarea
               rows={3}
-              value={formData.description || ""}
+              value={(formData.description as string) || ""}
               onChange={(e) => onFormChange("description", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
           <div>
@@ -1434,42 +1784,29 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="number"
-              value={formData.order || 0}
+              value={(formData.order as number) || 0}
               onChange={(e) => onFormChange("order", parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
           <div className="flex items-center">
             <input
               type="checkbox"
-              checked={formData.isActive || false}
+              checked={(formData.isActive as boolean) || false}
               onChange={(e) => onFormChange("isActive", e.target.checked)}
-              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+              className="w-4 h-4 text-purple-600 rounded"
             />
             <label className="ml-2 text-sm text-gray-700">Active</label>
           </div>
-          {imagePreview && (
-            <div>
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full max-h-48 object-cover rounded-lg"
-              />
-            </div>
-          )}
-          <label className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Image
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={onImageSelect}
-            />
-          </label>
+          <ImageUploadSection
+            imagePreview={imagePreview}
+            imageUrlInput={imageUrlInput}
+            imageSource={imageSource}
+            onImageSelect={onImageSelect}
+            onImageUrlInput={onImageUrlInput}
+          />
         </div>
       );
-
     case "mediaSpotlight":
       return (
         <div className="space-y-4">
@@ -1479,9 +1816,9 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={formData.title || ""}
+              value={(formData.title as string) || ""}
               onChange={(e) => onFormChange("title", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
           <div>
@@ -1490,9 +1827,9 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={formData.logo || ""}
+              value={(formData.logo as string) || ""}
               onChange={(e) => onFormChange("logo", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
           <div>
@@ -1501,9 +1838,9 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={formData.link || ""}
+              value={(formData.link as string) || ""}
               onChange={(e) => onFormChange("link", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
           <div>
@@ -1512,42 +1849,29 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="number"
-              value={formData.order || 0}
+              value={(formData.order as number) || 0}
               onChange={(e) => onFormChange("order", parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
           <div className="flex items-center">
             <input
               type="checkbox"
-              checked={formData.isActive || false}
+              checked={(formData.isActive as boolean) || false}
               onChange={(e) => onFormChange("isActive", e.target.checked)}
-              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+              className="w-4 h-4 text-purple-600 rounded"
             />
             <label className="ml-2 text-sm text-gray-700">Active</label>
           </div>
-          {imagePreview && (
-            <div>
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full max-h-48 object-cover rounded-lg"
-              />
-            </div>
-          )}
-          <label className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Image
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={onImageSelect}
-            />
-          </label>
+          <ImageUploadSection
+            imagePreview={imagePreview}
+            imageUrlInput={imageUrlInput}
+            imageSource={imageSource}
+            onImageSelect={onImageSelect}
+            onImageUrlInput={onImageUrlInput}
+          />
         </div>
       );
-
     case "catalogue":
       return (
         <div className="space-y-4">
@@ -1557,9 +1881,9 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={formData.title || ""}
+              value={(formData.title as string) || ""}
               onChange={(e) => onFormChange("title", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
           <div>
@@ -1568,125 +1892,64 @@ const FormDialogContent: React.FC<{
             </label>
             <textarea
               rows={2}
-              value={formData.description || ""}
+              value={(formData.description as string) || ""}
               onChange={(e) => onFormChange("description", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Price
+            </label>
+            <input
+              type="text"
+              value={(formData.price as string) || "0"}
+              onChange={(e) => onFormChange("price", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Rating
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={(formData.rating as number) || 4.5}
+              onChange={(e) =>
+                onFormChange("rating", parseFloat(e.target.value))
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
 
           <div className="border-t pt-4">
-            <h4 className="font-medium text-gray-900 mb-3">
-              Book Your Reading
-            </h4>
-            <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Reading Title"
-                value={formData.details?.bookYourReading?.title || ""}
-                onChange={(e) =>
-                  onNestedChange("details", "bookYourReading", {
-                    ...formData.details?.bookYourReading,
-                    title: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Description"
-                value={formData.details?.bookYourReading?.description || ""}
-                onChange={(e) =>
-                  onNestedChange("details", "bookYourReading", {
-                    ...formData.details?.bookYourReading,
-                    description: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  placeholder="Price"
-                  value={formData.details?.bookYourReading?.price || 0}
-                  onChange={(e) =>
-                    onNestedChange("details", "bookYourReading", {
-                      ...formData.details?.bookYourReading,
-                      price: parseInt(e.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="Duration"
-                  value={formData.details?.bookYourReading?.duration || ""}
-                  onChange={(e) =>
-                    onNestedChange("details", "bookYourReading", {
-                      ...formData.details?.bookYourReading,
-                      duration: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-4">
             <div className="flex justify-between items-center mb-3">
-              <h4 className="font-medium text-gray-900">Key Traits</h4>
+              <h4 className="font-medium text-gray-900">Traits</h4>
               <button
                 type="button"
-                onClick={() =>
-                  onArrayItemAdd("details", "keyTraits", {
-                    trait: "",
-                    description: "",
-                  })
-                }
-                className="text-sm text-purple-600 hover:text-purple-700"
+                onClick={() => onArrayItemAdd("traits", { trait: "" })}
+                className="text-sm text-purple-600"
               >
                 + Add Trait
               </button>
             </div>
-            {(formData.details?.keyTraits || []).map(
-              (trait: any, idx: number) => (
+            {((formData.traits as Array<{ trait: string }>) || []).map(
+              (trait: { trait: string }, idx: number) => (
                 <div key={idx} className="flex gap-2 mb-2">
                   <input
                     type="text"
                     placeholder="Trait"
                     value={trait.trait || ""}
                     onChange={(e) =>
-                      onArrayItemChange(
-                        "details",
-                        "keyTraits",
-                        idx,
-                        "trait",
-                        e.target.value,
-                      )
-                    }
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Description"
-                    value={trait.description || ""}
-                    onChange={(e) =>
-                      onArrayItemChange(
-                        "details",
-                        "keyTraits",
-                        idx,
-                        "description",
-                        e.target.value,
-                      )
+                      onArrayItemChange("traits", idx, "trait", e.target.value)
                     }
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                   <button
                     type="button"
-                    onClick={() =>
-                      onArrayItemRemove("details", "keyTraits", idx)
-                    }
-                    className="p-2 text-red-500 hover:text-red-700"
+                    onClick={() => onArrayItemRemove("traits", idx)}
+                    className="p-2 text-red-500"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1700,19 +1963,14 @@ const FormDialogContent: React.FC<{
               <h4 className="font-medium text-gray-900">Benefits</h4>
               <button
                 type="button"
-                onClick={() =>
-                  onArrayItemAdd("details", "benefits", {
-                    benefit: "",
-                    description: "",
-                  })
-                }
-                className="text-sm text-purple-600 hover:text-purple-700"
+                onClick={() => onArrayItemAdd("benefits", { benefit: "" })}
+                className="text-sm text-purple-600"
               >
                 + Add Benefit
               </button>
             </div>
-            {(formData.details?.benefits || []).map(
-              (benefit: any, idx: number) => (
+            {((formData.benefits as Array<{ benefit: string }>) || []).map(
+              (benefit: { benefit: string }, idx: number) => (
                 <div key={idx} className="flex gap-2 mb-2">
                   <input
                     type="text"
@@ -1720,7 +1978,6 @@ const FormDialogContent: React.FC<{
                     value={benefit.benefit || ""}
                     onChange={(e) =>
                       onArrayItemChange(
-                        "details",
                         "benefits",
                         idx,
                         "benefit",
@@ -1729,27 +1986,10 @@ const FormDialogContent: React.FC<{
                     }
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
-                  <input
-                    type="text"
-                    placeholder="Description"
-                    value={benefit.description || ""}
-                    onChange={(e) =>
-                      onArrayItemChange(
-                        "details",
-                        "benefits",
-                        idx,
-                        "description",
-                        e.target.value,
-                      )
-                    }
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
                   <button
                     type="button"
-                    onClick={() =>
-                      onArrayItemRemove("details", "benefits", idx)
-                    }
-                    className="p-2 text-red-500 hover:text-red-700"
+                    onClick={() => onArrayItemRemove("benefits", idx)}
+                    className="p-2 text-red-500"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1758,71 +1998,13 @@ const FormDialogContent: React.FC<{
             )}
           </div>
 
-          <div className="border-t pt-4">
-            <h4 className="font-medium text-gray-900 mb-3">Complete Package</h4>
-            <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Package Title"
-                value={formData.details?.completePackage?.title || ""}
-                onChange={(e) =>
-                  onNestedChange("details", "completePackage", {
-                    ...formData.details?.completePackage,
-                    title: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Includes (comma separated)"
-                value={
-                  formData.details?.completePackage?.includes?.join(", ") || ""
-                }
-                onChange={(e) =>
-                  onNestedChange("details", "completePackage", {
-                    ...formData.details?.completePackage,
-                    includes: e.target.value.split(",").map((s) => s.trim()),
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  placeholder="Price"
-                  value={formData.details?.completePackage?.price || 0}
-                  onChange={(e) =>
-                    onNestedChange("details", "completePackage", {
-                      ...formData.details?.completePackage,
-                      price: parseInt(e.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-                <input
-                  type="number"
-                  placeholder="Discount Price"
-                  value={formData.details?.completePackage?.discountPrice || 0}
-                  onChange={(e) =>
-                    onNestedChange("details", "completePackage", {
-                      ...formData.details?.completePackage,
-                      discountPrice: parseInt(e.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Order
             </label>
             <input
               type="number"
-              value={formData.order || 0}
+              value={(formData.order as number) || 0}
               onChange={(e) => onFormChange("order", parseInt(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
@@ -1830,36 +2012,21 @@ const FormDialogContent: React.FC<{
           <div className="flex items-center">
             <input
               type="checkbox"
-              checked={formData.isActive || false}
+              checked={(formData.isActive as boolean) || false}
               onChange={(e) => onFormChange("isActive", e.target.checked)}
-              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+              className="w-4 h-4 text-purple-600 rounded"
             />
             <label className="ml-2 text-sm text-gray-700">Active</label>
           </div>
-          {imagePreview && (
-            <div>
-              <Image
-                src={imagePreview}
-                alt="Preview"
-                className="w-full max-h-48 object-cover rounded-lg"
-                width={300}
-                height={200}
-              />
-            </div>
-          )}
-          <label className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Image
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={onImageSelect}
-            />
-          </label>
+          <ImageUploadSection
+            imagePreview={imagePreview}
+            imageUrlInput={imageUrlInput}
+            imageSource={imageSource}
+            onImageSelect={onImageSelect}
+            onImageUrlInput={onImageUrlInput}
+          />
         </div>
       );
-
     case "expertGuide":
       return (
         <div className="space-y-4">
@@ -1869,18 +2036,18 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={formData.name || ""}
+              value={(formData.name as string) || ""}
               onChange={(e) => onFormChange("name", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Rating</label>
+              <label className="block text-sm text-gray-600">Rating</label>
               <input
                 type="number"
                 step="0.1"
-                value={formData.rating || 4.8}
+                value={(formData.rating as number) || 4.8}
                 onChange={(e) =>
                   onFormChange("rating", parseFloat(e.target.value))
                 }
@@ -1888,12 +2055,10 @@ const FormDialogContent: React.FC<{
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                Reviews
-              </label>
+              <label className="block text-sm text-gray-600">Reviews</label>
               <input
                 type="number"
-                value={formData.reviews || 892}
+                value={(formData.reviews as number) || 892}
                 onChange={(e) =>
                   onFormChange("reviews", parseInt(e.target.value))
                 }
@@ -1901,12 +2066,12 @@ const FormDialogContent: React.FC<{
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
+              <label className="block text-sm text-gray-600">
                 Satisfaction (%)
               </label>
               <input
                 type="number"
-                value={formData.satisfactionRate || 92}
+                value={(formData.satisfactionRate as number) || 92}
                 onChange={(e) =>
                   onFormChange("satisfactionRate", parseInt(e.target.value))
                 }
@@ -1920,7 +2085,7 @@ const FormDialogContent: React.FC<{
             </label>
             <textarea
               rows={2}
-              value={formData.expertise || ""}
+              value={(formData.expertise as string) || ""}
               onChange={(e) => onFormChange("expertise", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
@@ -1931,7 +2096,7 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={formData.experience || ""}
+              value={(formData.experience as string) || ""}
               onChange={(e) => onFormChange("experience", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
@@ -1942,7 +2107,7 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={formData.languages?.join(", ") || ""}
+              value={((formData.languages as string[]) || []).join(", ")}
               onChange={(e) =>
                 onFormChange(
                   "languages",
@@ -1958,7 +2123,7 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={formData.expertiseAreas?.join(", ") || ""}
+              value={((formData.expertiseAreas as string[]) || []).join(", ")}
               onChange={(e) =>
                 onFormChange(
                   "expertiseAreas",
@@ -1971,9 +2136,9 @@ const FormDialogContent: React.FC<{
           <div className="flex items-center">
             <input
               type="checkbox"
-              checked={formData.isVerified || false}
+              checked={(formData.isVerified as boolean) || false}
               onChange={(e) => onFormChange("isVerified", e.target.checked)}
-              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+              className="w-4 h-4 text-purple-600 rounded"
             />
             <label className="ml-2 text-sm text-gray-700">
               Verified Expert
@@ -1985,7 +2150,7 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="number"
-              value={formData.order || 0}
+              value={(formData.order as number) || 0}
               onChange={(e) => onFormChange("order", parseInt(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
@@ -1993,37 +2158,87 @@ const FormDialogContent: React.FC<{
           <div className="flex items-center">
             <input
               type="checkbox"
-              checked={formData.isActive || false}
+              checked={(formData.isActive as boolean) || false}
               onChange={(e) => onFormChange("isActive", e.target.checked)}
-              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+              className="w-4 h-4 text-purple-600 rounded"
             />
             <label className="ml-2 text-sm text-gray-700">Active</label>
           </div>
-          {imagePreview && (
-            <div>
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full max-h-48 object-cover rounded-lg"
-              />
-            </div>
-          )}
-          <label className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Image
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={onImageSelect}
-            />
-          </label>
+          <ImageUploadSection
+            imagePreview={imagePreview}
+            imageUrlInput={imageUrlInput}
+            imageSource={imageSource}
+            onImageSelect={onImageSelect}
+            onImageUrlInput={onImageUrlInput}
+          />
         </div>
       );
-
     default:
       return null;
   }
+};
+
+// ==================== IMAGE UPLOAD SECTION ====================
+
+const ImageUploadSection: React.FC<{
+  imagePreview: string;
+  imageUrlInput: string;
+  imageSource: "file" | "url";
+  onImageSelect: (e: ChangeEvent<HTMLInputElement>) => void;
+  onImageUrlInput: (url: string) => void;
+}> = ({
+  imagePreview,
+  imageUrlInput,
+  imageSource,
+  onImageSelect,
+  onImageUrlInput,
+}) => {
+  const [source, setSource] = useState<"file" | "url">(imageSource);
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Image
+      </label>
+      <div className="flex gap-2 mb-2">
+        <button
+          onClick={() => setSource("file")}
+          className={`px-3 py-1 text-sm rounded ${source === "file" ? "bg-purple-600 text-white" : "bg-gray-200"}`}
+        >
+          Upload File
+        </button>
+        <button
+          onClick={() => setSource("url")}
+          className={`px-3 py-1 text-sm rounded ${source === "url" ? "bg-purple-600 text-white" : "bg-gray-200"}`}
+        >
+          Enter URL
+        </button>
+      </div>
+      {source === "file" ? (
+        <label className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
+          <Upload className="w-4 h-4 mr-2" /> Choose Image
+          <input type="file" hidden accept="image/*" onChange={onImageSelect} />
+        </label>
+      ) : (
+        <input
+          type="text"
+          placeholder="Enter image URL"
+          value={imageUrlInput}
+          onChange={(e) => onImageUrlInput(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+        />
+      )}
+      {imagePreview && (
+        <div className="mt-2">
+          <img
+            src={imagePreview}
+            alt="Preview"
+            className="w-full max-h-48 object-cover rounded-lg"
+          />
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default Home;
