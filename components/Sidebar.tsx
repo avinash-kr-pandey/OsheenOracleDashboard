@@ -266,6 +266,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/dashboard/home",
       icon: <FiStar />,
       color: "text-pink-300",
+      submenu: [
+        { name: "Home Content ", href: "/dashboard/home/content"},
+        { name: "Member Contents", href: "/dashboard/home/member" },
+      ],
     },
     {
       name: "Analytics",
