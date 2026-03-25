@@ -1,7 +1,7 @@
 "use client";
 
 
-import { AddOn, Benefit, membershipAdminApi, MembershipApplication, MembershipPlan, Stat, Testimonial } from "@/utils/becomeamember.api";
+import { AddOn, Benefit, membershipAdminApi, MembershipApplication, MembershipPlan, Stat, StatusUpdateData, Testimonial } from "@/utils/becomeamember.api";
 import {
   Edit2,
   Plus,
@@ -781,7 +781,7 @@ const ApplicationsContent: React.FC<{
                 <td className="py-3 px-4 text-sm text-gray-900">{app.name}</td>
                 <td className="py-3 px-4 text-sm text-gray-500">{app.email}</td>
                 <td className="py-3 px-4 text-sm text-gray-500">
-                  {app.fullPhoneNumber || "-"}
+                  {app.phone || "-"}
                 </td>
                 <td className="py-3 px-4 text-sm text-gray-500">{app.plan}</td>
                 <td className="py-3 px-4">
