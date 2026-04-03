@@ -267,7 +267,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: <FiStar />,
       color: "text-pink-300",
       submenu: [
-        { name: "Home Content ", href: "/dashboard/home/content"},
+        { name: "Home Content ", href: "/dashboard/home/content" },
         { name: "Member Contents", href: "/dashboard/home/member" },
       ],
     },
@@ -297,6 +297,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       submenu: [
         { name: "Add Product", href: "/dashboard/products/add" },
         { name: "View Product", href: "/dashboard/products/view" },
+      ],
+    },
+    {
+      name: "Media",
+      href: "/dashboard/media",
+      icon: <FiStar />,
+      color: "text-pink-300",
+      submenu: [
+        { name: "Images", href: "/dashboard/media/images" },
+        { name: "Videos", href: "/dashboard/media/videos" },
       ],
     },
     {
@@ -528,7 +538,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
       <aside
-  className={`
+        className={`
     bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900
     fixed top-0 left-0 h-screen
     text-white transition-all duration-300
@@ -537,10 +547,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
     flex flex-col
   `}
->
-
+      >
         <div className="md:py-5 p-0 md:p-5 py-5 pl-2 mt-10 md:mt-0 flex items-center justify-between border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900 pt-12 mb-4">
-         
           <div className="flex items-center justify-between md:justify-start flex-1 gap-4">
             {!isCollapsed && (
               <div className="flex items-center gap-3">
@@ -572,7 +580,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               )}
             </button>
           </div>
-           <button
+          <button
             onClick={onClose}
             className="lg:hidden p-2 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white transition"
           >
@@ -646,7 +654,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                     ? setOpenSubDropdown(
                                         openSubDropdown === sub.name
                                           ? null
-                                          : sub.name
+                                          : sub.name,
                                       )
                                     : router.push(sub.href)
                                 }
