@@ -1,52 +1,69 @@
-// pages/admin/Horoscope.tsx
 "use client";
 
-import { CreateHoroscopeData, CreateRishiData, CreateZodiacData, horoscopeAPI, HoroscopePrediction, Rishi, rishiAPI, Zodiac, zodiacAPI } from "@/utils/horoscopemain.api";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import {
+  CreateHoroscopeData,
+  CreateRishiData,
+  CreateZodiacData,
+  Zodiac,
+  HoroscopePrediction,
+  Rishi,
+} from "@/utils/horoscopemain.api";
+import {
+  TIME_FRAMES,
+  ZODIAC_SIGNS_LIST,
+  ELEMENTS,
+  fetchAllData,
+  addZodiacAPI,
+  updateZodiacAPI,
+  deleteZodiacAPI,
+  addPredictionAPI,
+  updatePredictionAPI,
+  deletePredictionAPI,
+  addRishiAPI,
+  updateRishiAPI,
+  deleteRishiAPI,
+} from "@/lib/horoscopeStore";
 
 type TabType = "zodiacs" | "predictions" | "rishis";
 type TimeFrame = "daily" | "weekly" | "monthly" | "yearly";
 
-// Union type for all possible item types
-type DataItem = Zodiac | HoroscopePrediction | Rishi;
-
-// Form types
-type ZodiacForm = CreateZodiacData;
-type PredictionForm = CreateHoroscopeData;
-type RishiForm = CreateRishiData;
+interface ToastState {
+  show: boolean;
+  message: string;
+  type: "success" | "error";
+}
 
 const Horoscope = () => {
-  const [activeTab, setActiveTab] = useState<TabType>("zodiacs");
-
   // Data states
   const [zodiacs, setZodiacs] = useState<Zodiac[]>([]);
   const [predictions, setPredictions] = useState<HoroscopePrediction[]>([]);
   const [rishis, setRishis] = useState<Rishi[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // UI states
-  const [loading, setLoading] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<TabType>("zodiacs");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [selectedTimeFrame] = useState<TimeFrame>("daily");
-  const [] = useState<string>("");
-
-  // Modal states
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame | "all">(
+    "all",
+  );
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-  const [selectedItem, setSelectedItem] = useState<DataItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<
+    Zodiac | HoroscopePrediction | Rishi | null
+  >(null);
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [showToast, setShowToast] = useState<{
-    show: boolean;
-    message: string;
-    type: "success" | "error";
-  }>({
+  const [toast, setToast] = useState<ToastState>({
     show: false,
     message: "",
     type: "success",
   });
 
-  // Form states for different tabs
-  const [zodiacForm, setZodiacForm] = useState<ZodiacForm>({
+  // Form states
+  const [zodiacForm, setZodiacForm] = useState<CreateZodiacData>({
     name: "",
     nameHindi: "",
     symbol: "",
@@ -57,7 +74,7 @@ const Horoscope = () => {
     elementHindi: "",
   });
 
-  const [predictionForm, setPredictionForm] = useState<PredictionForm>({
+  const [predictionForm, setPredictionForm] = useState<CreateHoroscopeData>({
     zodiacSign: "",
     zodiacSignHindi: "",
     rishiName: "",
@@ -68,7 +85,7 @@ const Horoscope = () => {
     timeFrame: "daily",
   });
 
-  const [rishiForm, setRishiForm] = useState<RishiForm>({
+  const [rishiForm, setRishiForm] = useState<CreateRishiData>({
     name: "",
     nameHindi: "",
     biography: "",
@@ -77,45 +94,38 @@ const Horoscope = () => {
     eraHindi: "",
   });
 
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const showNotification = useCallback(
+    (message: string, type: "success" | "error") => {
+      setToast({ show: true, message, type });
+      setTimeout(
+        () => setToast({ show: false, message: "", type: "success" }),
+        3000,
+      );
+    },
+    [],
+  );
 
-  // Fetch all data on mount
-  useEffect(() => {
-    fetchAllData();
-  }, []);
-
-  const fetchAllData = async (): Promise<void> => {
+  // Load data on mount
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [zodiacData, predictionData, rishiData] = await Promise.all([
-        zodiacAPI.getAll(),
-        horoscopeAPI.getAll(),
-        rishiAPI.getAll(),
-      ]);
-
-      setZodiacs(Array.isArray(zodiacData) ? zodiacData : []);
-      setPredictions(Array.isArray(predictionData) ? predictionData : []);
-      setRishis(Array.isArray(rishiData) ? rishiData : []);
+      const data = await fetchAllData();
+      setZodiacs(data.zodiacs);
+      setPredictions(data.predictions);
+      setRishis(data.rishis);
     } catch (error) {
-      showNotification("Error fetching data", "error");
+      console.error("Error loading data:", error);
+      showNotification("Failed to load data", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]);
 
-  const showNotification = (
-    message: string,
-    type: "success" | "error",
-  ): void => {
-    setShowToast({ show: true, message, type });
-    setTimeout(
-      () => setShowToast({ show: false, message: "", type: "success" }),
-      3000,
-    );
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  // Reset forms
-  const resetForms = (): void => {
+  const resetForms = useCallback(() => {
     setZodiacForm({
       name: "",
       nameHindi: "",
@@ -144,23 +154,20 @@ const Horoscope = () => {
       era: "",
       eraHindi: "",
     });
-    setFormErrors({});
-  };
+  }, []);
 
-  // Handle Add click
-  const handleAddClick = (): void => {
+  const handleAddClick = useCallback(() => {
     setModalMode("add");
     resetForms();
     setShowModal(true);
-  };
+  }, [resetForms]);
 
-  // Handle Edit click
-  const handleEditClick = (item: DataItem): void => {
-    setModalMode("edit");
-    setSelectedItem(item);
+  const handleEditClick = useCallback(
+    (item: Zodiac | HoroscopePrediction | Rishi) => {
+      setModalMode("edit");
+      setSelectedItem(item);
 
-    switch (activeTab) {
-      case "zodiacs": {
+      if (activeTab === "zodiacs") {
         const zodiac = item as Zodiac;
         setZodiacForm({
           name: zodiac.name || "",
@@ -172,9 +179,7 @@ const Horoscope = () => {
           element: zodiac.element || "",
           elementHindi: zodiac.elementHindi || "",
         });
-        break;
-      }
-      case "predictions": {
+      } else if (activeTab === "predictions") {
         const prediction = item as HoroscopePrediction;
         setPredictionForm({
           zodiacSign: prediction.zodiacSign || "",
@@ -188,9 +193,7 @@ const Horoscope = () => {
           predictionHindi: prediction.predictionHindi || "",
           timeFrame: prediction.timeFrame || "daily",
         });
-        break;
-      }
-      case "rishis": {
+      } else if (activeTab === "rishis") {
         const rishi = item as Rishi;
         setRishiForm({
           name: rishi.name || "",
@@ -200,210 +203,273 @@ const Horoscope = () => {
           era: rishi.era || "",
           eraHindi: rishi.eraHindi || "",
         });
-        break;
       }
-    }
-    setShowModal(true);
-  };
+      setShowModal(true);
+    },
+    [activeTab],
+  );
 
-  // Handle Delete
-  const handleDeleteClick = (id: string): void => {
+  const handleDeleteClick = useCallback((id: string) => {
     setDeleteId(id);
     setShowDeleteModal(true);
-  };
+  }, []);
 
-  const handleDeleteConfirm = async (): Promise<void> => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!deleteId) return;
-
-    setLoading(true);
+    setSubmitting(true);
     try {
-      switch (activeTab) {
-        case "zodiacs":
-          await zodiacAPI.delete(deleteId);
-          break;
-        case "predictions":
-          await horoscopeAPI.delete(deleteId);
-          break;
-        case "rishis":
-          await rishiAPI.delete(deleteId);
-          break;
+      if (activeTab === "zodiacs") {
+        await deleteZodiacAPI(deleteId);
+        setZodiacs((prev) => prev.filter((z) => z._id !== deleteId));
+      } else if (activeTab === "predictions") {
+        await deletePredictionAPI(deleteId);
+        setPredictions((prev) => prev.filter((p) => p._id !== deleteId));
+      } else if (activeTab === "rishis") {
+        await deleteRishiAPI(deleteId);
+        setRishis((prev) => prev.filter((r) => r._id !== deleteId));
       }
       showNotification("Deleted successfully!", "success");
-      fetchAllData();
     } catch (error) {
-      showNotification("Error deleting", "error");
+      showNotification("Error deleting item", "error");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
       setShowDeleteModal(false);
       setDeleteId(null);
     }
-  };
+  }, [deleteId, activeTab, showNotification]);
 
-  // Handle Form Submit
-  const handleSubmit = async (): Promise<void> => {
-    setLoading(true);
+  const handleSubmit = useCallback(async () => {
+    setSubmitting(true);
     try {
-      switch (activeTab) {
-        case "zodiacs":
-          if (modalMode === "add") {
-            await zodiacAPI.create(zodiacForm);
-          } else {
-            if (selectedItem) {
-              await zodiacAPI.update((selectedItem as Zodiac)._id, zodiacForm);
-            }
-          }
-          break;
-        case "predictions":
-          if (modalMode === "add") {
-            await horoscopeAPI.create(predictionForm);
-          } else {
-            if (selectedItem) {
-              await horoscopeAPI.update(
-                (selectedItem as HoroscopePrediction)._id,
-                predictionForm,
-              );
-            }
-          }
-          break;
-        case "rishis":
-          if (modalMode === "add") {
-            await rishiAPI.create(rishiForm);
-          } else {
-            if (selectedItem) {
-              await rishiAPI.update((selectedItem as Rishi)._id, rishiForm);
-            }
-          }
-          break;
+      if (activeTab === "zodiacs") {
+        if (modalMode === "add") {
+          const newZodiac = await addZodiacAPI(zodiacForm);
+          setZodiacs((prev) => [...prev, newZodiac]);
+        } else if (selectedItem) {
+          const updated = await updateZodiacAPI(
+            (selectedItem as Zodiac)._id,
+            zodiacForm,
+          );
+          setZodiacs((prev) =>
+            prev.map((z) =>
+              z._id === (selectedItem as Zodiac)._id ? updated : z,
+            ),
+          );
+        }
+      } else if (activeTab === "predictions") {
+        if (modalMode === "add") {
+          const newPrediction = await addPredictionAPI(predictionForm);
+          setPredictions((prev) => [...prev, newPrediction]);
+        } else if (selectedItem) {
+          const updated = await updatePredictionAPI(
+            (selectedItem as HoroscopePrediction)._id,
+            predictionForm,
+          );
+          setPredictions((prev) =>
+            prev.map((p) =>
+              p._id === (selectedItem as HoroscopePrediction)._id ? updated : p,
+            ),
+          );
+        }
+      } else if (activeTab === "rishis") {
+        if (modalMode === "add") {
+          const newRishi = await addRishiAPI(rishiForm);
+          setRishis((prev) => [...prev, newRishi]);
+        } else if (selectedItem) {
+          const updated = await updateRishiAPI(
+            (selectedItem as Rishi)._id,
+            rishiForm,
+          );
+          setRishis((prev) =>
+            prev.map((r) =>
+              r._id === (selectedItem as Rishi)._id ? updated : r,
+            ),
+          );
+        }
       }
       showNotification(
         `${modalMode === "add" ? "Added" : "Updated"} successfully!`,
         "success",
       );
       setShowModal(false);
-      fetchAllData();
+      resetForms();
     } catch (error) {
       showNotification(
-        `Error ${modalMode === "add" ? "adding" : "updating"}`,
+        `Error ${modalMode === "add" ? "adding" : "updating"} item`,
         "error",
       );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  };
+  }, [
+    activeTab,
+    modalMode,
+    zodiacForm,
+    predictionForm,
+    rishiForm,
+    selectedItem,
+    showNotification,
+    resetForms,
+  ]);
 
-  // Filter data based on search
-  const getFilteredData = (): DataItem[] => {
-    switch (activeTab) {
-      case "zodiacs":
-        return zodiacs.filter(
-          (z: Zodiac) =>
-            z.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            z.nameHindi.includes(searchTerm),
-        );
-      case "predictions":
-        return predictions.filter(
-          (p: HoroscopePrediction) =>
-            p.zodiacSign.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.rishiName || "")
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase()),
-        );
-      case "rishis":
-        return rishis.filter(
-          (r: Rishi) =>
-            r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.nameHindi || "").includes(searchTerm),
-        );
-      default:
-        return [];
+  const getFilteredData = useCallback((): (
+    | Zodiac
+    | HoroscopePrediction
+    | Rishi
+  )[] => {
+    const term = searchTerm.toLowerCase();
+    if (activeTab === "zodiacs") {
+      return zodiacs.filter(
+        (z) =>
+          z.name.toLowerCase().includes(term) || z.nameHindi.includes(term),
+      );
+    } else if (activeTab === "predictions") {
+      let filtered = predictions.filter(
+        (p) =>
+          p.zodiacSign.toLowerCase().includes(term) ||
+          (p.rishiName || "").toLowerCase().includes(term),
+      );
+      if (selectedTimeFrame !== "all")
+        filtered = filtered.filter((p) => p.timeFrame === selectedTimeFrame);
+      return filtered;
+    } else {
+      return rishis.filter(
+        (r) =>
+          r.name.toLowerCase().includes(term) ||
+          (r.nameHindi || "").includes(term),
+      );
     }
-  };
+  }, [activeTab, searchTerm, zodiacs, predictions, rishis, selectedTimeFrame]);
 
-  const timeFrames: TimeFrame[] = ["daily", "weekly", "monthly", "yearly"];
-  const elements: string[] = ["Fire", "Earth", "Air", "Water"];
-
-  // Type guard functions
-  const isZodiac = (item: DataItem): item is Zodiac => {
-    return (
-      (item as Zodiac).name !== undefined && (item as Zodiac).icon !== undefined
-    );
-  };
-
-  const isPrediction = (item: DataItem): item is HoroscopePrediction => {
-    return (item as HoroscopePrediction).zodiacSign !== undefined;
-  };
-
-  const isRishi = (item: DataItem): item is Rishi => {
-    return (item as Rishi).biography !== undefined;
+  const renderIcon = (icon: string) => {
+    if (!icon) return <span className="text-2xl">♈</span>;
+    if (icon.startsWith("data:image") || icon.startsWith("http")) {
+      return (
+        <Image
+          src={icon}
+          alt="icon"
+          width={32}
+          height={32}
+          className="w-8 h-8 object-contain"
+          unoptimized
+        />
+      );
+    }
+    return <span className="text-2xl">{icon}</span>;
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow">
+      <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <h1 className="text-3xl font-bold text-gray-900">
             Horoscope Management
           </h1>
+          <p className="text-gray-500 mt-1">
+            Manage zodiac signs, predictions, and rishis
+          </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 bg-white sticky top-[73px] z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab("zodiacs")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "zodiacs"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Zodiac Signs ({zodiacs.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("predictions")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "predictions"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Predictions ({predictions.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("rishis")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "rishis"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Rashi ({rishis.length})
-            </button>
+            {[
+              {
+                id: "zodiacs" as TabType,
+                label: "Zodiac Signs",
+                icon: "♈",
+                count: zodiacs.length,
+              },
+              {
+                id: "predictions" as TabType,
+                label: "Predictions",
+                icon: "📅",
+                count: predictions.length,
+              },
+              {
+                id: "rishis" as TabType,
+                label: "Rishis",
+                icon: "🕉️",
+                count: rishis.length,
+              },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSearchTerm("");
+                  setSelectedTimeFrame("all");
+                }}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-lg">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded-full text-xs ${activeTab === tab.id ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"}`}
+                  >
+                    {tab.count}
+                  </span>
+                </span>
+              </button>
+            ))}
           </nav>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Add Bar */}
-        <div className="mb-6 flex justify-between items-center">
-          <div className="w-96">
+        {/* TimeFrame Filter */}
+        {activeTab === "predictions" && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedTimeFrame("all")}
+              className={`px-3 py-1 rounded-full text-sm ${selectedTimeFrame === "all" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+            >
+              All
+            </button>
+            {TIME_FRAMES.map((tf) => (
+              <button
+                key={tf.value}
+                onClick={() => setSelectedTimeFrame(tf.value)}
+                className={`px-3 py-1 rounded-full text-sm capitalize ${selectedTimeFrame === tf.value ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Search and Add */}
+        <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="w-full sm:w-96 relative">
             <input
               type="text"
               placeholder={`Search ${activeTab}...`}
               value={searchTerm}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setSearchTerm(e.target.value)
-              }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+            <svg
+              className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
           </div>
           <button
             onClick={handleAddClick}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
           >
             <svg
               className="w-5 h-5"
@@ -418,212 +484,258 @@ const Horoscope = () => {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            Add New
+            Add New {activeTab.slice(0, -1)}
           </button>
         </div>
 
-        {/* Tables */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        {/* Table */}
+        {loading ? (
+          <div className="animate-pulse bg-white rounded-lg p-4 space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-16 bg-gray-100 rounded-lg"></div>
+            ))}
+          </div>
+        ) : getFilteredData().length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg">
+            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg
+                className="w-12 h-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                />
+              </svg>
             </div>
-          ) : (
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No {activeTab} found
+            </h3>
+            <button
+              onClick={handleAddClick}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              + Add New
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   {activeTab === "zodiacs" && (
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Icon
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Hindi Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Element
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Dates
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   )}
                   {activeTab === "predictions" && (
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Zodiac
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Rishi
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Time Frame
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Date
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Prediction
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   )}
                   {activeTab === "rishis" && (
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Hindi Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Era
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Biography
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   )}
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {getFilteredData().length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-6 py-4 text-center text-gray-500"
-                      >
-                        No data found
+                  {getFilteredData().map((item) => (
+                    <tr
+                      key={item._id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      {activeTab === "zodiacs" && (
+                        <>
+                          <td className="px-6 py-4">
+                            {renderIcon((item as Zodiac).icon)}
+                          </td>
+                          <td className="px-6 py-4 font-medium text-gray-900">
+                            {(item as Zodiac).name}
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {(item as Zodiac).nameHindi}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                (item as Zodiac).element === "Fire"
+                                  ? "bg-red-100 text-red-700"
+                                  : (item as Zodiac).element === "Earth"
+                                    ? "bg-green-100 text-green-700"
+                                    : (item as Zodiac).element === "Air"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-purple-100 text-purple-700"
+                              }`}
+                            >
+                              {(item as Zodiac).element}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {(item as Zodiac).dates}
+                          </td>
+                        </>
+                      )}
+                      {activeTab === "predictions" && (
+                        <>
+                          <td className="px-6 py-4 font-medium text-gray-900">
+                            {(item as HoroscopePrediction).zodiacSign}
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {(item as HoroscopePrediction).rishiName || "-"}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium capitalize">
+                              {(item as HoroscopePrediction).timeFrame}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {new Date(
+                              (item as HoroscopePrediction).date,
+                            ).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 max-w-md">
+                            <p className="text-gray-600 truncate">
+                              {(
+                                item as HoroscopePrediction
+                              ).prediction.substring(0, 80)}
+                              ...
+                            </p>
+                          </td>
+                        </>
+                      )}
+                      {activeTab === "rishis" && (
+                        <>
+                          <td className="px-6 py-4 font-medium text-gray-900">
+                            {(item as Rishi).name}
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {(item as Rishi).nameHindi || "-"}
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {(item as Rishi).era}
+                          </td>
+                          <td className="px-6 py-4 max-w-md">
+                            <p className="text-gray-600 truncate">
+                              {(item as Rishi).biography.substring(0, 80)}...
+                            </p>
+                          </td>
+                        </>
+                      )}
+                      <td className="px-6 py-4">
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={() => handleEditClick(item)}
+                            className="text-blue-600 hover:text-blue-900 transition-colors"
+                            title="Edit"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(item._id)}
+                            className="text-red-600 hover:text-red-900 transition-colors"
+                            title="Delete"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ) : (
-                    getFilteredData().map((item: DataItem, index: number) => (
-                      <tr key={item._id || index} className="hover:bg-gray-50">
-                        {activeTab === "zodiacs" && isZodiac(item) && (
-                          <>
-                            <td className="px-6 py-4 text-2xl">{item.icon}</td>
-                            <td className="px-6 py-4">{item.name}</td>
-                            <td className="px-6 py-4">{item.nameHindi}</td>
-                            <td className="px-6 py-4">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs ${
-                                  item.element === "Fire"
-                                    ? "bg-red-100 text-red-700"
-                                    : item.element === "Earth"
-                                      ? "bg-green-100 text-green-700"
-                                      : item.element === "Air"
-                                        ? "bg-blue-100 text-blue-700"
-                                        : "bg-purple-100 text-purple-700"
-                                }`}
-                              >
-                                {item.element}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">{item.dates}</td>
-                          </>
-                        )}
-                        {activeTab === "predictions" && isPrediction(item) && (
-                          <>
-                            <td className="px-6 py-4">{item.zodiacSign}</td>
-                            <td className="px-6 py-4">
-                              {item.rishiName || "-"}
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-                                {item.timeFrame}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              {new Date(item.date).toLocaleDateString()}
-                            </td>
-                            <td className="px-6 py-4 max-w-xs truncate">
-                              {item.prediction.substring(0, 50)}...
-                            </td>
-                          </>
-                        )}
-                        {activeTab === "rishis" && isRishi(item) && (
-                          <>
-                            <td className="px-6 py-4">{item.name}</td>
-                            <td className="px-6 py-4">
-                              {item.nameHindi || "-"}
-                            </td>
-                            <td className="px-6 py-4">{item.era}</td>
-                            <td className="px-6 py-4 max-w-xs truncate">
-                              {item.biography.substring(0, 50)}...
-                            </td>
-                          </>
-                        )}
-                        <td className="px-6 py-4">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleEditClick(item)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(item._id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                  ))}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Add/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {modalMode === "add" ? "Add" : "Edit"} {activeTab.slice(0, -1)}
+      {/* ==================== ADD/EDIT MODAL - ZODIACS ==================== */}
+      {showModal && activeTab === "zodiacs" && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {modalMode === "add" ? "Add" : "Edit"} Zodiac Sign
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-500"
+                className="text-gray-400 hover:text-gray-600"
               >
                 <svg
                   className="w-6 h-6"
@@ -641,378 +753,134 @@ const Horoscope = () => {
               </button>
             </div>
             <div className="px-6 py-4 space-y-4">
-              {activeTab === "zodiacs" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Name (English)
-                    </label>
-                    <input
-                      type="text"
-                      value={zodiacForm.name}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setZodiacForm({ ...zodiacForm, name: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Name (Hindi)
-                    </label>
-                    <input
-                      type="text"
-                      value={zodiacForm.nameHindi}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setZodiacForm({
-                          ...zodiacForm,
-                          nameHindi: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Symbol
-                    </label>
-                    <input
-                      type="text"
-                      value={zodiacForm.symbol}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setZodiacForm({ ...zodiacForm, symbol: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Icon
-                    </label>
-                    <input
-                      type="text"
-                      value={zodiacForm.icon}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setZodiacForm({ ...zodiacForm, icon: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                      placeholder="♈"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dates (English)
-                    </label>
-                    <input
-                      type="text"
-                      value={zodiacForm.dates}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setZodiacForm({ ...zodiacForm, dates: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                      placeholder="Mar 21 - Apr 19"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dates (Hindi)
-                    </label>
-                    <input
-                      type="text"
-                      value={zodiacForm.datesHindi}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setZodiacForm({
-                          ...zodiacForm,
-                          datesHindi: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Element (English)
-                    </label>
-                    <select
-                      value={zodiacForm.element}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                        setZodiacForm({
-                          ...zodiacForm,
-                          element: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">Select</option>
-                      {elements.map((e) => (
-                        <option key={e} value={e}>
-                          {e}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Element (Hindi)
-                    </label>
-                    <input
-                      type="text"
-                      value={zodiacForm.elementHindi}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setZodiacForm({
-                          ...zodiacForm,
-                          elementHindi: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                </>
-              )}
-
-              {activeTab === "predictions" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Zodiac Sign (English)
-                    </label>
-                    <select
-                      value={predictionForm.zodiacSign}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                        setPredictionForm({
-                          ...predictionForm,
-                          zodiacSign: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">Select</option>
-                      {zodiacs.map((z: Zodiac) => (
-                        <option key={z._id} value={z.name}>
-                          {z.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Zodiac Sign (Hindi)
-                    </label>
-                    <input
-                      type="text"
-                      value={predictionForm.zodiacSignHindi}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setPredictionForm({
-                          ...predictionForm,
-                          zodiacSignHindi: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Rashi Name (English)
-                    </label>
-                    <select
-                      value={predictionForm.rishiName}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                        setPredictionForm({
-                          ...predictionForm,
-                          rishiName: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">Select</option>
-                      {rishis.map((r: Rishi) => (
-                        <option key={r._id} value={r.name}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Rashi Name (Hindi)
-                    </label>
-                    <input
-                      type="text"
-                      value={predictionForm.rishiNameHindi}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setPredictionForm({
-                          ...predictionForm,
-                          rishiNameHindi: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Time Frame
-                    </label>
-                    <select
-                      value={predictionForm.timeFrame}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                        setPredictionForm({
-                          ...predictionForm,
-                          timeFrame: e.target.value as TimeFrame,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    >
-                      {timeFrames.map((t: TimeFrame) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date
-                    </label>
-                    <input
-                      type="date"
-                      value={predictionForm.date}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setPredictionForm({
-                          ...predictionForm,
-                          date: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Prediction (English)
-                    </label>
-                    <textarea
-                      value={predictionForm.prediction}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        setPredictionForm({
-                          ...predictionForm,
-                          prediction: e.target.value,
-                        })
-                      }
-                      rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Prediction (Hindi)
-                    </label>
-                    <textarea
-                      value={predictionForm.predictionHindi}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        setPredictionForm({
-                          ...predictionForm,
-                          predictionHindi: e.target.value,
-                        })
-                      }
-                      rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                </>
-              )}
-
-              {activeTab === "rishis" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Name (English)
-                    </label>
-                    <input
-                      type="text"
-                      value={rishiForm.name}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setRishiForm({ ...rishiForm, name: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Name (Hindi)
-                    </label>
-                    <input
-                      type="text"
-                      value={rishiForm.nameHindi}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setRishiForm({
-                          ...rishiForm,
-                          nameHindi: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Era (English)
-                    </label>
-                    <input
-                      type="text"
-                      value={rishiForm.era}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setRishiForm({ ...rishiForm, era: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Era (Hindi)
-                    </label>
-                    <input
-                      type="text"
-                      value={rishiForm.eraHindi}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setRishiForm({ ...rishiForm, eraHindi: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Biography (English)
-                    </label>
-                    <textarea
-                      value={rishiForm.biography}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        setRishiForm({
-                          ...rishiForm,
-                          biography: e.target.value,
-                        })
-                      }
-                      rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Biography (Hindi)
-                    </label>
-                    <textarea
-                      value={rishiForm.biographyHindi}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        setRishiForm({
-                          ...rishiForm,
-                          biographyHindi: e.target.value,
-                        })
-                      }
-                      rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                </>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name (English) *
+                  </label>
+                  <input
+                    type="text"
+                    value={zodiacForm.name}
+                    onChange={(e) =>
+                      setZodiacForm({ ...zodiacForm, name: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name (Hindi) *
+                  </label>
+                  <input
+                    type="text"
+                    value={zodiacForm.nameHindi}
+                    onChange={(e) =>
+                      setZodiacForm({
+                        ...zodiacForm,
+                        nameHindi: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Symbol
+                  </label>
+                  <input
+                    type="text"
+                    value={zodiacForm.symbol}
+                    onChange={(e) =>
+                      setZodiacForm({ ...zodiacForm, symbol: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="♈"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Icon (Emoji or URL)
+                  </label>
+                  <input
+                    type="text"
+                    value={zodiacForm.icon}
+                    onChange={(e) =>
+                      setZodiacForm({ ...zodiacForm, icon: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="♈ or image URL"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Dates (English)
+                  </label>
+                  <input
+                    type="text"
+                    value={zodiacForm.dates}
+                    onChange={(e) =>
+                      setZodiacForm({ ...zodiacForm, dates: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="Mar 21 - Apr 19"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Dates (Hindi)
+                  </label>
+                  <input
+                    type="text"
+                    value={zodiacForm.datesHindi}
+                    onChange={(e) =>
+                      setZodiacForm({
+                        ...zodiacForm,
+                        datesHindi: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Element (English)
+                  </label>
+                  <select
+                    value={zodiacForm.element}
+                    onChange={(e) =>
+                      setZodiacForm({ ...zodiacForm, element: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">Select</option>
+                    {ELEMENTS.map((e) => (
+                      <option key={e.name} value={e.name}>
+                        {e.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Element (Hindi)
+                  </label>
+                  <input
+                    type="text"
+                    value={zodiacForm.elementHindi}
+                    onChange={(e) =>
+                      setZodiacForm({
+                        ...zodiacForm,
+                        elementHindi: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+            <div className="sticky bottom-0 bg-white px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
               <button
                 onClick={() => setShowModal(false)}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
@@ -1021,26 +889,437 @@ const Horoscope = () => {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                disabled={submitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
               >
-                {loading ? "Saving..." : "Save"}
+                {submitting && (
+                  <svg
+                    className="animate-spin h-4 w-4 text-white"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                )}
+                {submitting ? "Saving..." : "Save"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Modal */}
+      {/* ==================== ADD/EDIT MODAL - PREDICTIONS ==================== */}
+      {showModal && activeTab === "predictions" && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {modalMode === "add" ? "Add" : "Edit"} Prediction
+              </h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Zodiac Sign *
+                  </label>
+                  <select
+                    value={predictionForm.zodiacSign}
+                    onChange={(e) =>
+                      setPredictionForm({
+                        ...predictionForm,
+                        zodiacSign: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  >
+                    <option value="">Select</option>
+                    {zodiacs.map((z) => (
+                      <option key={z._id} value={z.name}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Zodiac Sign (Hindi)
+                  </label>
+                  <input
+                    type="text"
+                    value={predictionForm.zodiacSignHindi}
+                    onChange={(e) =>
+                      setPredictionForm({
+                        ...predictionForm,
+                        zodiacSignHindi: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Rishi
+                  </label>
+                  <select
+                    value={predictionForm.rishiName}
+                    onChange={(e) =>
+                      setPredictionForm({
+                        ...predictionForm,
+                        rishiName: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">Select</option>
+                    {rishis.map((r) => (
+                      <option key={r._id} value={r.name}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Rishi (Hindi)
+                  </label>
+                  <input
+                    type="text"
+                    value={predictionForm.rishiNameHindi}
+                    onChange={(e) =>
+                      setPredictionForm({
+                        ...predictionForm,
+                        rishiNameHindi: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Time Frame *
+                  </label>
+                  <select
+                    value={predictionForm.timeFrame}
+                    onChange={(e) =>
+                      setPredictionForm({
+                        ...predictionForm,
+                        timeFrame: e.target.value as TimeFrame,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  >
+                    {TIME_FRAMES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={predictionForm.date}
+                    onChange={(e) =>
+                      setPredictionForm({
+                        ...predictionForm,
+                        date: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prediction (English) *
+                  </label>
+                  <textarea
+                    value={predictionForm.prediction}
+                    onChange={(e) =>
+                      setPredictionForm({
+                        ...predictionForm,
+                        prediction: e.target.value,
+                      })
+                    }
+                    rows={4}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prediction (Hindi)
+                  </label>
+                  <textarea
+                    value={predictionForm.predictionHindi}
+                    onChange={(e) =>
+                      setPredictionForm({
+                        ...predictionForm,
+                        predictionHindi: e.target.value,
+                      })
+                    }
+                    rows={4}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting && (
+                  <svg
+                    className="animate-spin h-4 w-4 text-white"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                )}
+                {submitting ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== ADD/EDIT MODAL - RISHIS ==================== */}
+      {showModal && activeTab === "rishis" && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {modalMode === "add" ? "Add" : "Edit"} Rishi
+              </h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name (English) *
+                  </label>
+                  <input
+                    type="text"
+                    value={rishiForm.name}
+                    onChange={(e) =>
+                      setRishiForm({ ...rishiForm, name: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name (Hindi)
+                  </label>
+                  <input
+                    type="text"
+                    value={rishiForm.nameHindi}
+                    onChange={(e) =>
+                      setRishiForm({ ...rishiForm, nameHindi: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Era (English) *
+                  </label>
+                  <input
+                    type="text"
+                    value={rishiForm.era}
+                    onChange={(e) =>
+                      setRishiForm({ ...rishiForm, era: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Era (Hindi)
+                  </label>
+                  <input
+                    type="text"
+                    value={rishiForm.eraHindi}
+                    onChange={(e) =>
+                      setRishiForm({ ...rishiForm, eraHindi: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Biography (English) *
+                  </label>
+                  <textarea
+                    value={rishiForm.biography}
+                    onChange={(e) =>
+                      setRishiForm({ ...rishiForm, biography: e.target.value })
+                    }
+                    rows={4}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Biography (Hindi)
+                  </label>
+                  <textarea
+                    value={rishiForm.biographyHindi}
+                    onChange={(e) =>
+                      setRishiForm({
+                        ...rishiForm,
+                        biographyHindi: e.target.value,
+                      })
+                    }
+                    rows={4}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting && (
+                  <svg
+                    className="animate-spin h-4 w-4 text-white"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                )}
+                {submitting ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== DELETE MODAL ==================== */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="px-6 py-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
                 Confirm Delete
               </h3>
-              <p className="text-gray-500">
-                Are you sure you want to delete this item?
+              <p className="text-gray-500 text-center">
+                Are you sure you want to delete this {activeTab.slice(0, -1)}?
+                This action cannot be undone.
               </p>
             </div>
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
@@ -1052,26 +1331,71 @@ const Horoscope = () => {
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                disabled={loading}
+                disabled={submitting}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
               >
-                {loading ? "Deleting..." : "Delete"}
+                Delete
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Toast */}
-      {showToast.show && (
+      {/* ==================== TOAST NOTIFICATION ==================== */}
+      {toast.show && (
         <div
-          className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg ${
-            showToast.type === "success" ? "bg-green-500" : "bg-red-500"
-          } text-white`}
+          className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg transition-all transform animate-slide-up ${toast.type === "success" ? "bg-green-500" : "bg-red-500"} text-white z-50`}
         >
-          {showToast.message}
+          <div className="flex items-center gap-2">
+            {toast.type === "success" ? (
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            )}
+            {toast.message}
+          </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };

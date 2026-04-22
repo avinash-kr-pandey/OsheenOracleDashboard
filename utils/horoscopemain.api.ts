@@ -1,4 +1,3 @@
-// services/horoscope.api.ts
 import { fetchData, postData, putData, deleteData } from "../utils/api";
 
 // ---------- ZODIAC TYPES ----------
@@ -82,20 +81,16 @@ export interface DeleteResponse {
 // ---------- ZODIAC API ----------
 export const zodiacAPI = {
   getAll: (): Promise<Zodiac[]> => fetchData<Zodiac[]>("/zodiacs"),
-
   getById: (id: string): Promise<Zodiac> => fetchData<Zodiac>(`/zodiacs/${id}`),
-
   create: (
     data: CreateZodiacData,
   ): Promise<{ message: string; zodiac: Zodiac }> =>
     postData<{ message: string; zodiac: Zodiac }>("/zodiacs", data),
-
   update: (
     id: string,
     data: UpdateZodiacData,
   ): Promise<{ message: string; zodiac: Zodiac }> =>
     putData<{ message: string; zodiac: Zodiac }>(`/zodiacs/${id}`, data),
-
   delete: (id: string): Promise<DeleteResponse> =>
     deleteData<DeleteResponse>(`/zodiacs/${id}`),
 };
@@ -104,25 +99,20 @@ export const zodiacAPI = {
 export const horoscopeAPI = {
   getAll: (): Promise<HoroscopePrediction[]> =>
     fetchData<HoroscopePrediction[]>("/horoscope"),
-
   getBySign: (sign: string): Promise<HoroscopePrediction[]> =>
     fetchData<HoroscopePrediction[]>(`/horoscope/${sign}`),
-
   getBySignAndTime: (
     sign: string,
     time: string,
   ): Promise<HoroscopePrediction> =>
     fetchData<HoroscopePrediction>(`/horoscope/${sign}/${time}`),
-
   create: (data: CreateHoroscopeData): Promise<HoroscopeCreateResponse> =>
     postData<HoroscopeCreateResponse>("/horoscope", data),
-
   update: (
     id: string,
     data: UpdateHoroscopeData,
   ): Promise<HoroscopeUpdateResponse> =>
     putData<HoroscopeUpdateResponse>(`/horoscope/${id}`, data),
-
   delete: (id: string): Promise<DeleteResponse> =>
     deleteData<DeleteResponse>(`/horoscope/${id}`),
 };
@@ -130,15 +120,11 @@ export const horoscopeAPI = {
 // ---------- RISHI API ----------
 export const rishiAPI = {
   getAll: (): Promise<Rishi[]> => fetchData<Rishi[]>("/rishis"),
-
   getById: (id: string): Promise<Rishi> => fetchData<Rishi>(`/rishis/${id}`),
-
   create: (data: CreateRishiData): Promise<RishiCreateResponse> =>
     postData<RishiCreateResponse>("/rishis", data),
-
   update: (id: string, data: UpdateRishiData): Promise<RishiUpdateResponse> =>
     putData<RishiUpdateResponse>(`/rishis/${id}`, data),
-
   delete: (id: string): Promise<DeleteResponse> =>
     deleteData<DeleteResponse>(`/rishis/${id}`),
 };

@@ -1,25 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  FiSearch, 
-  FiBell, 
-  FiSun, 
-  FiMoon,
-  FiUser,
-  FiLogOut
-} from 'react-icons/fi';
-import { useRouter } from 'next/navigation';
-import { fetchData } from '@/utils/api';
+import React, { useState, useEffect } from "react";
+import { FiSearch, FiUser, FiLogOut } from "react-icons/fi";
+import { useRouter } from "next/navigation";
+import { fetchData } from "@/utils/api";
 import { FiMenu } from "react-icons/fi";
+
+interface Address {
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
 
 interface UserData {
   _id: string;
+  id?: string;
   name: string;
   email: string;
   phone?: string;
   avatar?: string;
-  role?: string;  // Optional किया
+  role?: string;
+  type?: string;
   createdAt: string;
   updatedAt: string;
+  isVerified?: boolean;
+}
+
+interface ApiUser {
+  id: string;
+  name: string;
+  email: string;
+  type: string;
+  avatar?: string;
+  isVerified: boolean;
+  loginMethod: string;
+  addresses: Address[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  user: ApiUser;
 }
 
 interface HeaderProps {
@@ -28,83 +50,67 @@ interface HeaderProps {
 
 const Header = ({ onMenuClick }: HeaderProps) => {
   const router = useRouter();
-  const [darkMode, setDarkMode] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch user data on component mount
   useEffect(() => {
     fetchUserProfile();
-    
-    // Check saved theme preference
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setDarkMode(true);
-      document.documentElement.classList.add('dark');
-    }
   }, []);
 
   // Fetch user profile from API
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      const data = await fetchData<UserData>('/auth/profile');
-      setUserData(data);
-    } catch (error: any) {
-      console.error('Failed to fetch user profile:', error);
-      
-      // If unauthorized, redirect to login
-      if (error?.response?.status === 401) {
+      const response = await fetchData<ApiResponse>("/auth/profile");
+
+      if (response && response.success && response.user) {
+        const apiUser = response.user;
+
+        // Create UserData object from API response
+        const userInfo: UserData = {
+          _id: apiUser.id,
+          id: apiUser.id,
+          name: apiUser.name,
+          email: apiUser.email,
+          phone: "",
+          role: apiUser.type,
+          type: apiUser.type,
+          createdAt: apiUser.createdAt || new Date().toISOString(),
+          updatedAt: apiUser.updatedAt || new Date().toISOString(),
+          isVerified: apiUser.isVerified,
+          avatar: apiUser.avatar,
+        };
+
+        setUserData(userInfo);
+      } else {
+        throw new Error("Invalid response structure");
+      }
+    } catch (error: unknown) {
+      console.error("Failed to fetch user profile:", error);
+      const axiosError = error as { response?: { status?: number } };
+
+      if (axiosError?.response?.status === 401) {
         localStorage.clear();
         window.location.replace("/login");
-
       }
-      
-      // Set default data if API fails
-      setUserData({
-        _id: 'default-id',
-        name: 'Admin User',
-        email: 'admin@astro.com',
-        role: 'Admin',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
     }
   };
 
   // Handle logout
   const handleLogout = async () => {
     try {
-      // Call logout API
-      await fetchData('/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('Logout API error:', error);
+      await fetchData("/auth/logout", { method: "POST" });
+    } catch (error: unknown) {
+      console.error("Logout API error:", error);
     } finally {
-      // Clear all storage
       localStorage.clear();
       sessionStorage.clear();
-      
-      // Redirect to login
       window.location.replace("/login");
-
     }
   };
 
@@ -116,88 +122,69 @@ const Header = ({ onMenuClick }: HeaderProps) => {
     }
   };
 
-  // Format user role for display - SAFE VERSION
+  // Format user role for display - Direct from backend (no static mapping)
   const formatRole = (role?: string) => {
-    if (!role) return 'User';
-    
-    const roleMap: Record<string, string> = {
-      'admin': 'Administrator',
-      'super_admin': 'Super Admin',
-      'user': 'User',
-      'moderator': 'Moderator',
-      'administrator': 'Administrator'
-    };
-    
-    const formattedRole = roleMap[role.toLowerCase()] || 
-                         role.charAt(0).toUpperCase() + role.slice(1);
-    
-    return formattedRole;
+    if (!role) return "User";
+    // Just capitalize the first letter and return as is from backend
+    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
   };
 
-  // Get user initials for avatar - SAFE VERSION
+  // Get user initials for avatar
   const getUserInitials = () => {
-    if (!userData?.name) return 'U';
-    
+    if (!userData?.name) return "U";
+
     const name = userData.name.trim();
-    if (name.length === 0) return 'U';
-    
-    const nameParts = name.split(' ');
+    if (name.length === 0) return "U";
+
+    const nameParts = name.split(" ");
     if (nameParts.length === 1) {
       return nameParts[0].charAt(0).toUpperCase();
     }
-    
-    return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
-  };
 
-  // Format date safely
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return 'N/A';
-    }
+    return (
+      nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)
+    ).toUpperCase();
   };
 
   // Get year from date safely
   const getYearFromDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     try {
       return new Date(dateString).getFullYear();
     } catch {
-      return 'N/A';
+      return "N/A";
     }
   };
 
-  // Get user display name
+  // Get display name
   const getDisplayName = () => {
-    if (!userData?.name) return 'User';
+    if (!userData?.name) return "User";
     return userData.name;
   };
 
-  // Get user display email
+  // Get display email
   const getDisplayEmail = () => {
-    if (!userData?.email) return 'user@example.com';
+    if (!userData?.email) return "user@example.com";
     return userData.email;
   };
 
-  // Get user display role
+  // Get display role - Shows exact role from backend
   const getDisplayRole = () => {
-    return formatRole(userData?.role);
+    const role = userData?.role || userData?.type;
+    return formatRole(role);
   };
 
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="h-16 px-6 flex items-center justify-between">
-        
         {/* Left Section - Brand/Logo */}
-       <div className="flex items-center gap-4">
-         <button
-    onClick={onMenuClick}
-    className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-  >
-    <FiMenu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-  </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onMenuClick}
+            className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <FiMenu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          </button>
 
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
@@ -223,22 +210,8 @@ const Header = ({ onMenuClick }: HeaderProps) => {
           </form>
         </div>
 
-        {/* Right Section - Icons & User */}
+        {/* Right Section - User Menu */}
         <div className="flex items-center gap-3">
-          
-          {/* Dark Mode Toggle */}
-          <button
-            onClick={toggleDarkMode}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {darkMode ? (
-              <FiSun className="w-5 h-5 text-yellow-500" />
-            ) : (
-              <FiMoon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            )}
-          </button>
-
           {/* User Menu */}
           <div className="relative">
             <button
@@ -256,7 +229,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                   </span>
                 )}
               </div>
-              
+
               {/* User info with loading state */}
               <div className="hidden md:block text-left">
                 {loading ? (
@@ -275,25 +248,30 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                   </>
                 )}
               </div>
-              
+
               {/* Dropdown arrow */}
-              <svg 
+              <svg
                 className={`w-4 h-4 text-gray-500 transition-transform ${
-                  showUserMenu ? 'rotate-180' : ''
-                } ${loading ? 'opacity-50' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
+                  showUserMenu ? "rotate-180" : ""
+                } ${loading ? "opacity-50" : ""}`}
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </button>
 
             {/* User Menu Dropdown */}
             {showUserMenu && !loading && userData && (
               <>
-                <div 
-                  className="fixed inset-0 z-30" 
+                <div
+                  className="fixed inset-0 z-30"
                   onClick={() => setShowUserMenu(false)}
                 />
                 <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-40">
@@ -323,7 +301,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Menu items */}
                   <div className="py-2">
                     <a
@@ -334,10 +312,12 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                       <FiUser className="w-4 h-4" />
                       <div>
                         <p>View Profile</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500">Personal details & settings</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          Personal details & settings
+                        </p>
                       </div>
                     </a>
-                    
+
                     {userData.phone && (
                       <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
                         <p className="font-medium mb-1">Contact Info</p>
@@ -359,8 +339,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                       <FiLogOut className="w-4 h-4" />
                       Logout
                     </button>
-                    
- 
                   </div>
                 </div>
               </>

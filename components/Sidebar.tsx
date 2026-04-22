@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import {
   FiChevronDown,
   FiChevronRight,
-  FiMenu,
   FiX,
   FiHome,
   FiUsers,
@@ -15,28 +14,59 @@ import {
   FiHelpCircle,
   FiStar,
   FiSettings,
-  FiCalendar,
   FiLogOut,
 } from "react-icons/fi";
 import { fetchData, setAuthToken } from "@/utils/api";
 
-interface UserProfile {
-  _id: string;
+// ==================== Types ====================
+
+interface Address {
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
+
+interface ApiUserData {
+  id: string;
   name: string;
   email: string;
-  phone?: string;
+  type: string;
   avatar?: string;
-  role?: string;
-  addresses?: any[];
+  isVerified: boolean;
+  loginMethod: string;
+  addresses: Address[];
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: any;
+}
+
+interface ApiProfileResponse {
+  success: boolean;
+  user: ApiUserData;
+}
+
+interface UserProfile {
+  _id: string;
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  role: string;
+  type: string;
+  addresses: Address[];
+  createdAt?: string;
+  updatedAt?: string;
+  isVerified: boolean;
+  loginMethod: string;
 }
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
 interface NavSubItem {
   name: string;
   href: string;
@@ -51,30 +81,49 @@ interface NavItem {
   submenu?: NavSubItem[];
 }
 
+interface ProfileModalProps {
+  user: UserProfile | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onLogout: () => void;
+}
+
+// ==================== Helper Functions ====================
+
 const getProfile = async (): Promise<UserProfile> => {
   try {
-    return await fetchData<UserProfile>("/auth/profile");
+    const response = await fetchData<ApiProfileResponse>("/auth/profile");
+    console.log("Profile API response:", response);
+
+    if (response && response.success && response.user) {
+      const apiUser = response.user;
+      return {
+        _id: apiUser.id,
+        id: apiUser.id,
+        name: apiUser.name,
+        email: apiUser.email,
+        phone: "",
+        role: apiUser.type,
+        type: apiUser.type,
+        addresses: apiUser.addresses || [],
+        avatar: apiUser.avatar,
+        isVerified: apiUser.isVerified,
+        loginMethod: apiUser.loginMethod,
+        createdAt: apiUser.createdAt,
+        updatedAt: apiUser.updatedAt,
+      };
+    }
+
+    throw new Error("Invalid profile response structure");
   } catch (error) {
     console.error("Profile fetch error:", error);
     throw error;
   }
 };
 
-function ProfileModal({
-  user,
-  isOpen,
-  onClose,
-  onLogout,
-}: {
-  user: UserProfile | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onLogout: () => void;
-}) {
-  if (!isOpen) return null;
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return "N/A";
+  try {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -82,7 +131,15 @@ function ProfileModal({
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
+  } catch {
+    return "N/A";
+  }
+};
+
+// ==================== Profile Modal Component ====================
+
+function ProfileModal({ user, isOpen, onClose, onLogout }: ProfileModalProps) {
+  if (!isOpen) return null;
 
   if (!user) {
     return (
@@ -107,7 +164,7 @@ function ProfileModal({
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-blue-400 rounded-full flex items-center justify-center shadow-lg">
                 <span className="text-white text-xl font-bold">
-                  {user?.name?.charAt(0).toUpperCase() || "U"}
+                  {user.name.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div>
@@ -133,60 +190,60 @@ function ProfileModal({
             <div className="space-y-2">
               <p className="text-gray-400 text-sm">Full Name</p>
               <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                {user.name || "Not provided"}
+                {user.name}
               </div>
             </div>
 
             <div className="space-y-2">
               <p className="text-gray-400 text-sm">Email Address</p>
               <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                {user.email || "Not provided"}
+                {user.email}
               </div>
             </div>
 
             <div className="space-y-2">
               <p className="text-gray-400 text-sm">User ID</p>
               <div className="text-white font-mono text-sm p-3 bg-gray-800/50 rounded-lg border border-gray-700 truncate">
-                {user._id || "N/A"}
+                {user.id}
               </div>
             </div>
 
             <div className="space-y-2">
               <p className="text-gray-400 text-sm">Role</p>
               <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                {user.role || "User"}
+                {user.role}
               </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-gray-400 text-sm">Account Created</p>
+              <p className="text-gray-400 text-sm">Verification Status</p>
               <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                {formatDate(user.createdAt)}
+                {user.isVerified ? "✅ Verified" : "⚠️ Not Verified"}
               </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-gray-400 text-sm">Last Updated</p>
+              <p className="text-gray-400 text-sm">Login Method</p>
               <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                {formatDate(user.updatedAt)}
+                {user.loginMethod}
               </div>
             </div>
+
+            {user.createdAt && (
+              <div className="space-y-2">
+                <p className="text-gray-400 text-sm">Account Created</p>
+                <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                  {formatDate(user.createdAt)}
+                </div>
+              </div>
+            )}
           </div>
-
-          {user.phone && (
-            <div className="mb-6">
-              <p className="text-gray-400 text-sm mb-2">Phone Number</p>
-              <div className="text-white font-medium p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                {user.phone}
-              </div>
-            </div>
-          )}
 
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-white mb-3">Addresses</h3>
-            {user.addresses && user.addresses.length > 0 ? (
+            {user.addresses.length > 0 ? (
               <div className="space-y-3">
-                {user.addresses.map((address: any, index: number) => (
+                {user.addresses.map((address, index) => (
                   <div
                     key={index}
                     className="p-3 bg-gray-800/30 rounded-lg border border-gray-700"
@@ -240,7 +297,7 @@ function ProfileModal({
           <p className="text-gray-500 text-sm">
             User ID:{" "}
             <span className="text-gray-400 font-mono">
-              {user._id?.slice(0, 12)}...
+              {user.id.slice(0, 12)}...
             </span>
           </p>
         </div>
@@ -248,6 +305,8 @@ function ProfileModal({
     </div>
   );
 }
+
+// ==================== Main Sidebar Component ====================
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
@@ -267,7 +326,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: <FiStar />,
       color: "text-pink-300",
       submenu: [
-        { name: "Home Content ", href: "/dashboard/home/content" },
+        { name: "Home Content", href: "/dashboard/home/content" },
         { name: "Member Contents", href: "/dashboard/home/member" },
       ],
     },
@@ -345,17 +404,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: "View FAQ", href: "/dashboard/faq/view" },
       ],
     },
-    // {
-    //   name: "Horoscope",
-    //   href: "/dashboard/horoscope",
-    //   icon: <FiCalendar />,
-    //   color: "text-indigo-400",
-    //   submenu: [
-    //     { name: "Add Horoscope", href: "/dashboard/horoscope/add" },
-    //     { name: "View Horoscope", href: "/dashboard/horoscope/view" },
-    //   ],
-    // },
-
     {
       name: "Blog",
       href: "/dashboard/blog",
@@ -372,12 +420,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: "View Astrologer", href: "/dashboard/astrologer/view" },
       ],
     },
-    // {
-    //   name: "Zodiacs",
-    //   href: "/dashboard/zodiacs",
-    //   icon: <FiStar />,
-    //   color: "text-purple-300",
-    // },
     {
       name: "Horoscope Main",
       href: "/dashboard/horoscopemain",
@@ -414,28 +456,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           name: "Reading Service",
           href: "/dashboard/reading/readingservice",
           submenu: [
-            {
-              name: "Add",
-              href: "/dashboard/reading/readingservice/add",
-            },
-            {
-              name: "View",
-              href: "/dashboard/reading/readingservice/view",
-            },
+            { name: "Add", href: "/dashboard/reading/readingservice/add" },
+            { name: "View", href: "/dashboard/reading/readingservice/view" },
           ],
         },
         {
           name: "Reading Package",
           href: "/dashboard/reading/readingPackage",
           submenu: [
-            {
-              name: "Add",
-              href: "/dashboard/reading/readingPackage/add",
-            },
-            {
-              name: "View",
-              href: "/dashboard/reading/readingPackage/view",
-            },
+            { name: "Add", href: "/dashboard/reading/readingPackage/add" },
+            { name: "View", href: "/dashboard/reading/readingPackage/view" },
           ],
         },
       ],
@@ -450,16 +480,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: "View Benefit", href: "/dashboard/benefit/view" },
       ],
     },
-    // {
-    //   name: "Rashi",
-    //   href: "/dashboard/rashi",
-    //   icon: <FiStar />,
-    //   color: "text-pink-300",
-    //   // submenu: [
-    //   //   { name: "Add Rashi", href: "/dashboard/rashi/add" },
-    //   //   { name: "View Rashi", href: "/dashboard/rashi/view" },
-    //   // ],
-    // },
   ];
 
   const isActive = (item: NavItem): boolean => {
@@ -468,14 +488,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (item.submenu) {
       const hasActiveSubmenu = item.submenu.some((sub) => {
         if (pathname === sub.href) return true;
-
         if (sub.submenu) {
           return sub.submenu.some((child) => pathname === child.href);
         }
-
         return false;
       });
-
       if (hasActiveSubmenu) return true;
     }
 
@@ -486,36 +503,54 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
+
+        const token =
+          localStorage.getItem("token") || localStorage.getItem("authToken");
+        console.log("Current token:", token ? "Token exists" : "No token");
+
+        if (!token) {
+          console.log("No token found, redirecting to login...");
+          router.push("/login");
+          return;
+        }
+
+        setAuthToken(token);
         const profile = await getProfile();
+        console.log("Profile fetched successfully:", profile);
         setUser(profile);
       } catch (error) {
         console.error("Failed to fetch profile:", error);
-        setUser({
-          _id: "694a82e83d22a29abf6776ab",
-          name: "Dummy User",
-          email: "dummy@gmail.com",
-          addresses: [],
-          createdAt: "2025-12-23T11:54:16.111Z",
-          updatedAt: "2025-12-23T11:54:16.111Z",
-        });
+        const axiosError = error as {
+          response?: { status?: number; data?: { message?: string } };
+        };
+
+        if (axiosError?.response?.status === 403) {
+          const errorMessage = axiosError?.response?.data?.message;
+          if (errorMessage === "Please verify your email first") {
+            console.log("Email not verified");
+          } else {
+            console.log("Invalid token or session expired");
+            localStorage.removeItem("token");
+            localStorage.removeItem("authToken");
+            setAuthToken(null);
+            router.push("/login");
+          }
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserProfile();
-  }, []);
+  }, [router]);
 
   const handleLogout = async () => {
     try {
-      await fetchData("/auth/logout", {
-        method: "POST",
-      });
-
+      await fetchData("/auth/logout", { method: "POST" });
       localStorage.removeItem("token");
       localStorage.removeItem("authToken");
       localStorage.removeItem("user");
-
+      sessionStorage.clear();
       setAuthToken(null);
       setUser(null);
       setShowProfileModal(false);
@@ -523,6 +558,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     } catch (error) {
       console.error("Logout error:", error);
       localStorage.clear();
+      setAuthToken(null);
+      setUser(null);
       router.push("/login");
     }
   };
@@ -539,14 +576,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     <>
       <aside
         className={`
-    bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900
-    fixed top-0 left-0 h-screen
-    text-white transition-all duration-300
-    border-r border-gray-700 z-40
-    ${isCollapsed ? "w-20" : "w-64"}
-    ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-    flex flex-col
-  `}
+          bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900
+          fixed top-0 left-0 h-screen
+          text-white transition-all duration-300
+          border-r border-gray-700 z-40
+          ${isCollapsed ? "w-20" : "w-64"}
+          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          flex flex-col
+        `}
       >
         <div className="md:py-5 p-0 md:p-5 py-5 pl-2 mt-10 md:mt-0 flex items-center justify-between border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900 pt-12 mb-4">
           <div className="flex items-center justify-between md:justify-start flex-1 gap-4">
@@ -573,11 +610,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               className="p-2 hover:bg-gray-700 rounded-lg text-gray-300 hover:text-white transition-colors hidden lg:block"
               title={isCollapsed ? "Expand" : "Collapse"}
             >
-              {isCollapsed ? (
-                <FiChevronRight size={20} />
-              ) : (
-                <FiChevronRight size={20} className="rotate-180" />
-              )}
+              <FiChevronRight
+                size={20}
+                className={isCollapsed ? "" : "rotate-180"}
+              />
             </button>
           </div>
           <button
@@ -631,9 +667,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       </span>
                       {!isCollapsed && (
                         <span
-                          className={`transition-transform ${
-                            openDropdown === item.name ? "rotate-180" : ""
-                          }`}
+                          className={`transition-transform ${openDropdown === item.name ? "rotate-180" : ""}`}
                         >
                           <FiChevronDown size={16} className="text-gray-400" />
                         </span>
@@ -658,15 +692,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                       )
                                     : router.push(sub.href)
                                 }
-                                className={`flex w-full items-center justify-between
-                                  px-3 py-2.5 rounded-lg text-sm transition-all duration-200
-                                  text-gray-300 hover:bg-gray-700 hover:text-white`}
+                                className="flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 text-gray-300 hover:bg-gray-700 hover:text-white"
                               >
                                 <span className="flex items-center gap-2">
                                   <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />
                                   {sub.name}
                                 </span>
-
                                 {hasChild &&
                                   (openSubDropdown === sub.name ? (
                                     <FiChevronDown size={14} />
@@ -682,12 +713,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                       <Link
                                         href={child.href}
                                         onClick={onClose}
-                                        className={`block px-3 py-2 rounded-md text-xs transition-all
-                                          ${
-                                            pathname === child.href
-                                              ? "bg-gradient-to-r from-blue-600/30 to-purple-600/30 text-white ml-2"
-                                              : "text-gray-400 hover:bg-gray-700 hover:text-white hover:ml-2"
-                                          }`}
+                                        className={`block px-3 py-2 rounded-md text-xs transition-all ${
+                                          pathname === child.href
+                                            ? "bg-gradient-to-r from-blue-600/30 to-purple-600/30 text-white ml-2"
+                                            : "text-gray-400 hover:bg-gray-700 hover:text-white hover:ml-2"
+                                        }`}
                                       >
                                         {child.name}
                                       </Link>
@@ -721,11 +751,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     `}
                   >
                     <span
-                      className={`${
-                        item.color
-                      } text-lg transition-transform group-hover:scale-110 ${
-                        itemActive ? "text-white" : ""
-                      }`}
+                      className={`${item.color} text-lg transition-transform group-hover:scale-110 ${itemActive ? "text-white" : ""}`}
                     >
                       {item.icon}
                     </span>
