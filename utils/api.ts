@@ -1,8 +1,7 @@
-// utils/api.ts
 import axios, { AxiosError, AxiosResponse } from "axios";
 
-// const API_BASE_URL = "https://api.osheenoracle.com/api";
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://api.osheenoracle.com/api";
+// const API_BASE_URL = "http://localhost:5000/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -63,15 +62,13 @@ export const setAuthToken = (token: string | null) => {
 };
 
 /* =======================
-   GET - UPDATED
+   GET
 ======================= */
 export const fetchData = async <T = unknown>(
   endpoint: string,
   params?: object,
-  noCache: boolean = false, // ✅ Default false
 ): Promise<T> => {
   try {
-    // ✅ Sirf params bhejo, headers mat bhejo
     const response: AxiosResponse<T> = await api.get(endpoint, { params });
     return response.data;
   } catch (error) {
@@ -116,6 +113,23 @@ export const putData = async <T = unknown>(
 };
 
 /* =======================
+   PATCH (NEW)
+======================= */
+export const patchData = async <T = unknown>(
+  endpoint: string,
+  data: object,
+): Promise<T> => {
+  try {
+    const response: AxiosResponse<T> = await api.patch(endpoint, data);
+    return response.data;
+  } catch (error) {
+    const err = error as AxiosError;
+    console.error("PATCH Error:", err.response?.data || err.message);
+    throw err;
+  }
+};
+
+/* =======================
    DELETE
 ======================= */
 export const deleteData = async <T = unknown>(endpoint: string): Promise<T> => {
@@ -128,14 +142,11 @@ export const deleteData = async <T = unknown>(endpoint: string): Promise<T> => {
     throw err;
   }
 };
-// utils/api.ts - Horoscope section
 
 /* =======================
    HOROSCOPE ENDPOINTS
-   Based on your backend routes and actual schema
 ======================= */
 
-// Complete Horoscope type matching your backend
 export interface Horoscope {
   _id: string;
   zodiacSign: string;
@@ -149,8 +160,6 @@ export interface Horoscope {
   createdAt: string;
   updatedAt: string;
   __v?: number;
-
-  // For backward compatibility - optional
   sign?: string;
 }
 
@@ -163,8 +172,6 @@ export interface HoroscopeResponse {
   error?: string;
   status?: number;
   statusCode?: number;
-
-  // For when the response is directly a Horoscope object
   _id?: string;
   zodiacSign?: string;
   zodiacSignHindi?: string;
@@ -188,18 +195,10 @@ export interface CreateHoroscopeData {
   timeFrame: string;
   rishiName: string;
   rishiNameHindi: string;
-
-  // Optional for backward compatibility
   sign?: string;
 }
 
 export const horoscopeAPI = {
-  /**
-   * Add new horoscope prediction
-   * POST /api/horoscope
-   * @param horoscopeData - Complete horoscope data with Hindi fields
-   * @returns Promise with response
-   */
   addHoroscope: (
     horoscopeData: CreateHoroscopeData,
   ): Promise<HoroscopeResponse> => {
@@ -207,24 +206,11 @@ export const horoscopeAPI = {
     return postData<HoroscopeResponse>("/horoscope", horoscopeData);
   },
 
-  /**
-   * Get horoscope by zodiac sign
-   * GET /api/horoscope/{sign}
-   * @param sign - Zodiac sign name (English)
-   * @returns Promise with horoscope data
-   */
   getHoroscopeBySign: (sign: string): Promise<HoroscopeResponse> => {
     console.log("🔍 Fetching horoscope for sign:", sign);
     return fetchData<HoroscopeResponse>(`/horoscope/${sign}`);
   },
 
-  /**
-   * Get horoscope by sign and time frame
-   * GET /api/horoscope/{sign}/{time}
-   * @param sign - Zodiac sign name (English)
-   * @param time - Time frame (daily, weekly, monthly, yearly)
-   * @returns Promise with horoscope data
-   */
   getHoroscopeBySignAndTime: (
     sign: string,
     time: string,
@@ -233,11 +219,6 @@ export const horoscopeAPI = {
     return fetchData<HoroscopeResponse>(`/horoscope/${sign}/${time}`);
   },
 
-  /**
-   * Get all horoscopes (if this endpoint exists)
-   * GET /api/horoscope
-   * @returns Promise with all horoscopes
-   */
   getAllHoroscopes: (): Promise<HoroscopeResponse> => {
     console.log("📋 Fetching all horoscopes");
     return fetchData<HoroscopeResponse>("/horoscope");
