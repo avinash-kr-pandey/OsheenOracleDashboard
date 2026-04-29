@@ -1,4 +1,3 @@
-// services/blog.api.ts
 import { fetchData, postData, putData, deleteData, postFormData } from "./api";
 
 // ==================== TYPES ====================
@@ -61,45 +60,55 @@ export interface UploadResponse {
     size: number;
     type: string;
   };
-  url?: string; // Alternative response format
+  url?: string;
 }
 
-// ==================== FILE UPLOAD (EXACTLY LIKE PRODUCT API) ====================
+// ✅ Renamed from Comment to BlogComment to avoid conflict with DOM Comment type
+export interface BlogComment {
+  _id: string;
+  blogId: string;
+  name: string;
+  email: string;
+  comment: string;
+  isApproved: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommentResponse {
+  success: boolean;
+  count?: number;
+  data?: BlogComment | BlogComment[];
+  message?: string;
+  error?: string;
+}
+
+export interface AddCommentData {
+  name: string;
+  email: string;
+  comment: string;
+}
+
+// ==================== FILE UPLOAD ====================
 
 export const uploadBlogImage = async (file: File): Promise<string | null> => {
   try {
     const formData = new FormData();
     formData.append("file", file);
 
-    console.log("📤 Uploading blog image:", file.name, "Size:", file.size);
-
     const response = await postFormData<UploadResponse>(
       "/uploads/file-upload",
       formData,
     );
 
-    console.log("📥 Upload response:", response);
-
-    // Handle multiple response formats
     if (response.success) {
-      if (response.file?.url) {
-        return response.file.url;
-      }
-      if (response.url) {
-        return response.url;
-      }
+      if (response.file?.url) return response.file.url;
+      if (response.url) return response.url;
     }
 
-    console.error("❌ Upload failed - no URL in response");
     return null;
-  } catch (error: any) {
-    console.error(
-      "❌ Blog image upload error:",
-      error?.response?.data || error.message,
-    );
-
-    // Return a default image instead of failing
-    console.log("🔄 Using default image as fallback");
+  } catch (error) {
+    console.error("Blog image upload error:", error);
     return "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format";
   }
 };
@@ -111,12 +120,7 @@ export const getAllBlogs = async (): Promise<BlogResponse> => {
     const response = await fetchData<BlogResponse>("/blogs");
     return response;
   } catch (error) {
-    console.error("Error fetching blogs:", error);
-    return {
-      success: false,
-      error: "Failed to fetch blogs",
-      data: [],
-    };
+    return { success: false, error: "Failed to fetch blogs", data: [] };
   }
 };
 
@@ -125,10 +129,86 @@ export const getBlogById = async (id: string): Promise<BlogResponse> => {
     const response = await fetchData<BlogResponse>(`/blogs/${id}`);
     return response;
   } catch (error) {
-    console.error(`Error fetching blog ${id}:`, error);
+    return { success: false, error: "Failed to fetch blog" };
+  }
+};
+
+// ==================== COMMENT APIs (PUBLIC) ====================
+
+export const getBlogComments = async (
+  blogId: string,
+): Promise<CommentResponse> => {
+  try {
+    const response = await fetchData<CommentResponse>(
+      `/blogs/${blogId}/comments`,
+    );
+    return response;
+  } catch (error) {
+    return { success: false, error: "Failed to fetch comments" };
+  }
+};
+
+export const addBlogComment = async (
+  blogId: string,
+  commentData: AddCommentData,
+): Promise<CommentResponse> => {
+  try {
+    const response = await postData<CommentResponse>(
+      `/blogs/${blogId}/comments`,
+      commentData,
+    );
+    return response;
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } } };
     return {
       success: false,
-      error: "Failed to fetch blog",
+      error: err?.response?.data?.message || "Failed to add comment",
+    };
+  }
+};
+
+// ==================== ADMIN COMMENT APIs ====================
+
+export const getAllComments = async (): Promise<CommentResponse> => {
+  try {
+    const response = await fetchData<CommentResponse>("/blogs/comments");
+    return response;
+  } catch (error) {
+    return { success: false, error: "Failed to fetch comments" };
+  }
+};
+
+export const approveComment = async (
+  commentId: string,
+): Promise<CommentResponse> => {
+  try {
+    const response = await putData<CommentResponse>(
+      `/blogs/comments/${commentId}/approve`,
+      {},
+    );
+    return response;
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } } };
+    return {
+      success: false,
+      error: err?.response?.data?.message || "Failed to approve comment",
+    };
+  }
+};
+
+export const deleteComment = async (
+  commentId: string,
+): Promise<CommentResponse> => {
+  try {
+    const response = await deleteData<CommentResponse>(
+      `/blogs/comments/${commentId}`,
+    );
+    return response;
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } } };
+    return {
+      success: false,
+      error: err?.response?.data?.message || "Failed to delete comment",
     };
   }
 };
@@ -139,17 +219,13 @@ export const createBlog = async (
   blogData: CreateBlogData,
 ): Promise<BlogResponse> => {
   try {
-    console.log("📝 Creating blog with data:", blogData);
     const response = await postData<BlogResponse>("/blogs", blogData);
     return response;
-  } catch (error: any) {
-    console.error(
-      "Error creating blog:",
-      error?.response?.data || error.message,
-    );
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } } };
     return {
       success: false,
-      error: error?.response?.data?.message || "Failed to create blog",
+      error: err?.response?.data?.message || "Failed to create blog",
     };
   }
 };
@@ -159,7 +235,6 @@ export const createBlogWithImage = async (
 ): Promise<BlogResponse> => {
   let imageUrl: string;
 
-  // Upload image if it's a File object
   if (blogData.image instanceof File) {
     const uploadedUrl = await uploadBlogImage(blogData.image);
     imageUrl =
@@ -171,7 +246,6 @@ export const createBlogWithImage = async (
       "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format";
   }
 
-  // Create blog with image URL
   const finalData: CreateBlogData = {
     title: blogData.title,
     description: blogData.description,
@@ -192,17 +266,13 @@ export const updateBlog = async (
   blogData: Partial<CreateBlogData>,
 ): Promise<BlogResponse> => {
   try {
-    console.log("✏️ Updating blog:", id, blogData);
     const response = await putData<BlogResponse>(`/blogs/${id}`, blogData);
     return response;
-  } catch (error: any) {
-    console.error(
-      `Error updating blog ${id}:`,
-      error?.response?.data || error.message,
-    );
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } } };
     return {
       success: false,
-      error: error?.response?.data?.message || "Failed to update blog",
+      error: err?.response?.data?.message || "Failed to update blog",
     };
   }
 };
@@ -210,23 +280,17 @@ export const updateBlog = async (
 export const updateBlogWithImage = async (
   id: string,
   blogData: Partial<CreateBlogFormData>,
-  oldImageUrl?: string,
 ): Promise<BlogResponse> => {
   let imageUrl: string | undefined;
 
-  // Upload new image if it's a File object
   if (blogData.image instanceof File) {
     const uploadedUrl = await uploadBlogImage(blogData.image);
-    if (uploadedUrl) {
-      imageUrl = uploadedUrl;
-    }
+    if (uploadedUrl) imageUrl = uploadedUrl;
   } else if (blogData.image && typeof blogData.image === "string") {
     imageUrl = blogData.image;
   }
 
-  // Prepare update data - only include fields that are provided
   const updateData: Partial<CreateBlogData> = {};
-
   if (blogData.title !== undefined) updateData.title = blogData.title;
   if (blogData.description !== undefined)
     updateData.description = blogData.description;
@@ -246,17 +310,13 @@ export const updateBlogWithImage = async (
 
 export const deleteBlog = async (id: string): Promise<BlogResponse> => {
   try {
-    console.log("🗑️ Deleting blog:", id);
     const response = await deleteData<BlogResponse>(`/blogs/${id}`);
     return response;
-  } catch (error: any) {
-    console.error(
-      `Error deleting blog ${id}:`,
-      error?.response?.data || error.message,
-    );
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } } };
     return {
       success: false,
-      error: error?.response?.data?.message || "Failed to delete blog",
+      error: err?.response?.data?.message || "Failed to delete blog",
     };
   }
 };
@@ -270,11 +330,7 @@ export const getBlogsByCategory = async (
     );
     return response;
   } catch (error) {
-    console.error(`Error fetching blogs by category ${category}:`, error);
-    return {
-      success: false,
-      error: "Failed to fetch blogs by category",
-    };
+    return { success: false, error: "Failed to fetch blogs by category" };
   }
 };
 
@@ -283,11 +339,7 @@ export const incrementComments = async (id: string): Promise<BlogResponse> => {
     const response = await putData<BlogResponse>(`/blogs/${id}/comments`, {});
     return response;
   } catch (error) {
-    console.error(`Error incrementing comments for blog ${id}:`, error);
-    return {
-      success: false,
-      error: "Failed to increment comments",
-    };
+    return { success: false, error: "Failed to increment comments" };
   }
 };
 
@@ -304,12 +356,13 @@ export const getAuthorInitials = (author: string): string => {
 };
 
 export const formatBlogDate = (dateString?: string): string => {
-  if (!dateString)
+  if (!dateString) {
     return new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
+  }
   const date = new Date(dateString);
   return date.toLocaleDateString("en-US", {
     year: "numeric",
@@ -318,22 +371,20 @@ export const formatBlogDate = (dateString?: string): string => {
   });
 };
 
-export const transformBlogForUI = (blog: Blog) => {
-  return {
-    id: blog._id,
-    title: blog.title,
-    description: blog.description,
-    image: blog.image,
-    category: blog.category,
-    date: blog.date || formatBlogDate(blog.createdAt),
-    comments: blog.comments || 0,
-    views: blog.views || 0,
-    author: blog.author,
-    authorInitials: blog.authorInitials || getAuthorInitials(blog.author),
-    tags: blog.tags || [],
-    excerpt: blog.excerpt || blog.description?.substring(0, 100) + "..." || "",
-  };
-};
+export const transformBlogForUI = (blog: Blog) => ({
+  id: blog._id,
+  title: blog.title,
+  description: blog.description,
+  image: blog.image,
+  category: blog.category,
+  date: blog.date || formatBlogDate(blog.createdAt),
+  comments: blog.comments || 0,
+  views: blog.views || 0,
+  author: blog.author,
+  authorInitials: blog.authorInitials || getAuthorInitials(blog.author),
+  tags: blog.tags || [],
+  excerpt: blog.excerpt || blog.description?.substring(0, 100) + "..." || "",
+});
 
 // ==================== EXPORT ====================
 
@@ -348,4 +399,9 @@ export const blogAPI = {
   getBlogsByCategory,
   incrementComments,
   uploadBlogImage,
+  getBlogComments,
+  addBlogComment,
+  getAllComments,
+  approveComment,
+  deleteComment,
 };
