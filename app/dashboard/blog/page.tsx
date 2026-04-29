@@ -1,24 +1,83 @@
-// pages/admin/AdminBlogs.tsx
 "use client";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { Blog, blogAPI, CreateBlogData } from "@/utils/blog.api";
-import { useEffect, useState } from "react";
-
+import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
+import { Blog, blogAPI, CreateBlogFormData, getAuthorInitials } from "@/utils/blog.api";
 
 // Categories for dropdown
 const categories = [
   "Astrology",
+  "Horoscope",
+  "Moon Magic",
+  "Tarot",
+  "Spirituality",
+  "Planets",
+  "Zodiac",
+  "Cosmic",
   "Vastu",
   "Numerology",
   "Palmistry",
   "Gemstones",
-  "Spirituality",
-  "Horoscope",
   "Muhurat",
   "Remedies",
   "Other",
 ];
+
+// Toast Component
+const Toast = ({
+  message,
+  type,
+  onClose,
+}: {
+  message: string;
+  type: "success" | "error";
+  onClose: () => void;
+}) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div
+      className={`fixed bottom-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg animate-slide-up ${
+        type === "success" ? "bg-green-500" : "bg-red-500"
+      } text-white flex items-center gap-3`}
+    >
+      {type === "success" ? (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      ) : (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      )}
+      {message}
+    </div>
+  );
+};
 
 const AdminBlogs: React.FC = () => {
   const { user } = useAuth();
@@ -27,34 +86,56 @@ const AdminBlogs: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // Modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
-  const [showToast, setShowToast] = useState({
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({
     show: false,
     message: "",
     type: "success",
   });
 
   // Form states
-  const [formData, setFormData] = useState<CreateBlogData>({
+  const [formData, setFormData] = useState<CreateBlogFormData>({
     title: "",
-    content: "",
+    description: "",
     excerpt: "",
     author: user?.name || "",
+    authorInitials: "",
     category: "",
     tags: [],
-    coverImage: "",
+    image: "",
   });
 
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Fetch blogs on mount
   useEffect(() => {
     fetchBlogs();
   }, []);
+
+  // Update author initials when author changes
+  useEffect(() => {
+    if (formData.author) {
+      setFormData((prev) => ({
+        ...prev,
+        authorInitials: getAuthorInitials(formData.author),
+      }));
+    }
+  }, [formData.author]);
+
+  const showNotification = (message: string, type: "success" | "error") => {
+    setToast({ show: true, message, type });
+  };
 
   const fetchBlogs = async () => {
     setLoading(true);
@@ -64,40 +145,70 @@ const AdminBlogs: React.FC = () => {
         setBlogs(response.data);
       }
     } catch (error) {
+      console.error("Error fetching blogs:", error);
+      showNotification("Failed to fetch blogs", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const showNotification = (message: string, type: "success" | "error") => {
-    setShowToast({ show: true, message, type });
-    setTimeout(
-      () => setShowToast({ show: false, message: "", type: "success" }),
-      3000,
-    );
-  };
-
   const resetForm = () => {
     setFormData({
       title: "",
-      content: "",
+      description: "",
       excerpt: "",
       author: user?.name || "",
+      authorInitials: "",
       category: "",
       tags: [],
-      coverImage: "",
+      image: "",
     });
+    setImagePreview("");
     setFormErrors({});
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     if (!formData.title.trim()) errors.title = "Title is required";
-    if (!formData.content.trim()) errors.content = "Content is required";
+    if (!formData.description.trim())
+      errors.description = "Description is required";
     if (!formData.author.trim()) errors.author = "Author is required";
     if (!formData.category) errors.category = "Category is required";
+    if (!formData.image) errors.image = "Image is required";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const handleImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    isEdit: boolean = false,
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showNotification("Image size should be less than 5MB", "error");
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        showNotification("Please upload an image file", "error");
+        return;
+      }
+
+      setFormData({ ...formData, image: file });
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    }
+  };
+
+  const handleImageUrlChange = (url: string) => {
+    setFormData({ ...formData, image: url });
+    setImagePreview(url);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   // Handle Create Blog
@@ -107,14 +218,17 @@ const AdminBlogs: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await blogAPI.createBlog(formData);
+      const response = await blogAPI.createBlogWithImage(formData);
       if (response.success) {
         showNotification("Blog created successfully!", "success");
         resetForm();
         fetchBlogs();
         setActiveTab("view");
+      } else {
+        showNotification(response.error || "Error creating blog", "error");
       }
-    } catch (error) {
+    } catch (err) {
+      console.error("Error creating blog:", err);
       showNotification("Error creating blog", "error");
     } finally {
       setLoading(false);
@@ -126,14 +240,20 @@ const AdminBlogs: React.FC = () => {
     setSelectedBlog(blog);
     setFormData({
       title: blog.title,
-      content: blog.content,
+      description: blog.description,
       excerpt: blog.excerpt || "",
       author: blog.author,
+      authorInitials: blog.authorInitials,
       category: blog.category,
       tags: blog.tags || [],
-      coverImage: blog.coverImage || "",
+      image: blog.image,
     });
+    setImagePreview(blog.image);
     setShowEditModal(true);
+    // Reset edit file input
+    if (editFileInputRef.current) {
+      editFileInputRef.current.value = "";
+    }
   };
 
   const handleUpdateBlog = async () => {
@@ -141,14 +261,21 @@ const AdminBlogs: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await blogAPI.updateBlog(selectedBlog._id, formData);
+      const response = await blogAPI.updateBlogWithImage(
+        selectedBlog._id,
+        formData,
+        selectedBlog.image,
+      );
       if (response.success) {
         showNotification("Blog updated successfully!", "success");
         setShowEditModal(false);
         fetchBlogs();
         resetForm();
+      } else {
+        showNotification(response.error || "Error updating blog", "error");
       }
-    } catch (error) {
+    } catch (err) {
+      console.error("Error updating blog:", err);
       showNotification("Error updating blog", "error");
     } finally {
       setLoading(false);
@@ -157,8 +284,11 @@ const AdminBlogs: React.FC = () => {
 
   // Handle Delete Blog
   const handleDeleteClick = (blogId: string) => {
-    setSelectedBlog(blogs.find((b) => b._id === blogId) || null);
-    setShowDeleteModal(true);
+    const blog = blogs.find((b) => b._id === blogId);
+    if (blog) {
+      setSelectedBlog(blog);
+      setShowDeleteModal(true);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -170,9 +300,12 @@ const AdminBlogs: React.FC = () => {
       if (response.success) {
         showNotification("Blog deleted successfully!", "success");
         setShowDeleteModal(false);
-        fetchBlogs();
+        await fetchBlogs(); // Refresh the list
+      } else {
+        showNotification(response.error || "Error deleting blog", "error");
       }
-    } catch (error) {
+    } catch (err) {
+      console.error("Error deleting blog:", err);
       showNotification("Error deleting blog", "error");
     } finally {
       setLoading(false);
@@ -192,6 +325,17 @@ const AdminBlogs: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast Notification */}
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() =>
+            setToast({ show: false, message: "", type: "success" })
+          }
+        />
+      )}
+
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -207,7 +351,7 @@ const AdminBlogs: React.FC = () => {
               onClick={() => setActiveTab("add")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === "add"
-                  ? "border-blue-500 text-blue-600"
+                  ? "border-orange-500 text-orange-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
@@ -232,7 +376,7 @@ const AdminBlogs: React.FC = () => {
               onClick={() => setActiveTab("view")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === "view"
-                  ? "border-blue-500 text-blue-600"
+                  ? "border-orange-500 text-orange-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
@@ -263,9 +407,8 @@ const AdminBlogs: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Add Blog Tab */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Add Blog Tab */}
         {activeTab === "add" && (
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">
@@ -284,7 +427,7 @@ const AdminBlogs: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${
                     formErrors.title ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="Enter blog title"
@@ -296,7 +439,7 @@ const AdminBlogs: React.FC = () => {
                 )}
               </div>
 
-              {/* Author and Category Row */}
+              {/* Author and Category */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -308,11 +451,16 @@ const AdminBlogs: React.FC = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, author: e.target.value })
                     }
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${
                       formErrors.author ? "border-red-500" : "border-gray-300"
                     }`}
                     placeholder="Author name"
                   />
+                  {formData.authorInitials && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Initials: {formData.authorInitials}
+                    </p>
+                  )}
                   {formErrors.author && (
                     <p className="mt-1 text-sm text-red-500">
                       {formErrors.author}
@@ -329,7 +477,7 @@ const AdminBlogs: React.FC = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, category: e.target.value })
                     }
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${
                       formErrors.category ? "border-red-500" : "border-gray-300"
                     }`}
                   >
@@ -348,6 +496,75 @@ const AdminBlogs: React.FC = () => {
                 </div>
               </div>
 
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Image <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Image URL
+                    </label>
+                    <input
+                      type="url"
+                      value={
+                        typeof formData.image === "string" ? formData.image : ""
+                      }
+                      onChange={(e) => handleImageUrlChange(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">
+                        OR upload file
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, false)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                    />
+                  </div>
+
+                  {(imagePreview ||
+                    (typeof formData.image === "string" && formData.image)) && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500 mb-2">Preview:</p>
+                      <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200">
+                        <Image
+                          src={
+                            imagePreview ||
+                            (typeof formData.image === "string"
+                              ? formData.image
+                              : "")
+                          }
+                          alt="Preview"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {formErrors.image && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {formErrors.image}
+                  </p>
+                )}
+              </div>
+
               {/* Excerpt */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -359,7 +576,7 @@ const AdminBlogs: React.FC = () => {
                     setFormData({ ...formData, excerpt: e.target.value })
                   }
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   placeholder="Brief description of the blog..."
                 />
               </div>
@@ -370,37 +587,23 @@ const AdminBlogs: React.FC = () => {
                   Content <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  value={formData.content}
+                  value={formData.description}
                   onChange={(e) =>
-                    setFormData({ ...formData, content: e.target.value })
+                    setFormData({ ...formData, description: e.target.value })
                   }
                   rows={8}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.content ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${
+                    formErrors.description
+                      ? "border-red-500"
+                      : "border-gray-300"
                   }`}
                   placeholder="Write your blog content here..."
                 />
-                {formErrors.content && (
+                {formErrors.description && (
                   <p className="mt-1 text-sm text-red-500">
-                    {formErrors.content}
+                    {formErrors.description}
                   </p>
                 )}
-              </div>
-
-              {/* Cover Image */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cover Image URL
-                </label>
-                <input
-                  type="url"
-                  value={formData.coverImage}
-                  onChange={(e) =>
-                    setFormData({ ...formData, coverImage: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://example.com/image.jpg"
-                />
               </div>
 
               {/* Tags */}
@@ -420,7 +623,7 @@ const AdminBlogs: React.FC = () => {
                         .filter((tag) => tag),
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   placeholder="astrology, horoscope, predictions"
                 />
               </div>
@@ -430,7 +633,7 @@ const AdminBlogs: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -495,7 +698,7 @@ const AdminBlogs: React.FC = () => {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search by title, author, category..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
                 <div>
@@ -505,7 +708,7 @@ const AdminBlogs: React.FC = () => {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   >
                     <option value="">All Categories</option>
                     {categories.map((cat) => (
@@ -534,7 +737,7 @@ const AdminBlogs: React.FC = () => {
               {loading ? (
                 <div className="flex justify-center items-center h-64">
                   <svg
-                    className="animate-spin h-8 w-8 text-blue-600"
+                    className="animate-spin h-8 w-8 text-orange-600"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -560,6 +763,9 @@ const AdminBlogs: React.FC = () => {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Image
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Title
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -569,13 +775,7 @@ const AdminBlogs: React.FC = () => {
                           Category
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Tags
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Views
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Comments
+                          Views/Comments
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Created
@@ -589,7 +789,7 @@ const AdminBlogs: React.FC = () => {
                       {filteredBlogs.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={8}
+                            colSpan={7}
                             className="px-6 py-4 text-center text-gray-500"
                           >
                             No blogs found
@@ -599,6 +799,16 @@ const AdminBlogs: React.FC = () => {
                         filteredBlogs.map((blog) => (
                           <tr key={blog._id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="relative w-10 h-10 rounded-lg overflow-hidden">
+                                <Image
+                                  src={blog.image}
+                                  alt={blog.title}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
                               <div className="text-sm font-medium text-gray-900">
                                 {blog.title}
                               </div>
@@ -612,36 +822,24 @@ const AdminBlogs: React.FC = () => {
                               {blog.author}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
                                 {blog.category}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex gap-1 flex-wrap">
-                                {blog.tags?.map((tag, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
-                                  >
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              👁️ {blog.views} | 💬 {blog.comments}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {blog.views}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {blog.comments}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {format(new Date(blog.createdAt), "dd MMM yyyy")}
+                              {format(
+                                new Date(blog.createdAt || blog.date),
+                                "dd MMM yyyy",
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex space-x-2">
                                 <button
                                   onClick={() => handleEditClick(blog)}
-                                  className="text-blue-600 hover:text-blue-900"
+                                  className="text-orange-600 hover:text-orange-900"
                                 >
                                   <svg
                                     className="w-5 h-5"
@@ -690,7 +888,7 @@ const AdminBlogs: React.FC = () => {
       </div>
 
       {/* Edit Modal */}
-      {showEditModal && (
+      {showEditModal && selectedBlog && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
@@ -715,10 +913,9 @@ const AdminBlogs: React.FC = () => {
               </button>
             </div>
             <div className="px-6 py-4 space-y-4">
-              {/* Edit form fields - same as create form */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Title
+                  Title *
                 </label>
                 <input
                   type="text"
@@ -726,13 +923,13 @@ const AdminBlogs: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Author
+                    Author *
                   </label>
                   <input
                     type="text"
@@ -740,19 +937,19 @@ const AdminBlogs: React.FC = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, author: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category
+                    Category *
                   </label>
                   <select
                     value={formData.category}
                     onChange={(e) =>
                       setFormData({ ...formData, category: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   >
                     {categories.map((cat) => (
                       <option key={cat} value={cat}>
@@ -762,30 +959,71 @@ const AdminBlogs: React.FC = () => {
                   </select>
                 </div>
               </div>
+
+              {/* Edit Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Excerpt
+                  Image
                 </label>
-                <textarea
-                  value={formData.excerpt}
-                  onChange={(e) =>
-                    setFormData({ ...formData, excerpt: e.target.value })
-                  }
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <div className="space-y-3">
+                  <input
+                    type="url"
+                    value={
+                      typeof formData.image === "string" ? formData.image : ""
+                    }
+                    onChange={(e) => handleImageUrlChange(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">
+                        OR upload new image
+                      </span>
+                    </div>
+                  </div>
+                  <input
+                    ref={editFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageChange(e, true)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                  />
+                  {(imagePreview || formData.image) && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500 mb-2">Preview:</p>
+                      <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200">
+                        <Image
+                          src={
+                            imagePreview ||
+                            (typeof formData.image === "string"
+                              ? formData.image
+                              : "")
+                          }
+                          alt="Preview"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Content
+                  Description/Content *
                 </label>
                 <textarea
-                  value={formData.content}
+                  value={formData.description}
                   onChange={(e) =>
-                    setFormData({ ...formData, content: e.target.value })
+                    setFormData({ ...formData, description: e.target.value })
                   }
                   rows={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 />
               </div>
             </div>
@@ -799,7 +1037,7 @@ const AdminBlogs: React.FC = () => {
               <button
                 onClick={handleUpdateBlog}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
               >
                 {loading ? "Updating..." : "Update Blog"}
               </button>
@@ -809,7 +1047,7 @@ const AdminBlogs: React.FC = () => {
       )}
 
       {/* Delete Modal */}
-      {showDeleteModal && (
+      {showDeleteModal && selectedBlog && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="px-6 py-4">
@@ -817,7 +1055,7 @@ const AdminBlogs: React.FC = () => {
                 Delete Blog
               </h3>
               <p className="text-gray-500">
-                Are you sure you want to delete {selectedBlog?.title}? This
+                Are you sure you want to delete {selectedBlog.title}? This
                 action cannot be undone.
               </p>
             </div>
@@ -840,16 +1078,21 @@ const AdminBlogs: React.FC = () => {
         </div>
       )}
 
-      {/* Toast Notification */}
-      {showToast.show && (
-        <div
-          className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg ${
-            showToast.type === "success" ? "bg-green-500" : "bg-red-500"
-          } text-white`}
-        >
-          {showToast.message}
-        </div>
-      )}
+      <style jsx>{`
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slideUp 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
