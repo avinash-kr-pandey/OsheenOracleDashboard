@@ -1,15 +1,23 @@
 import axios, { AxiosError, AxiosResponse } from "axios";
 
 // ✅ Dynamic API URL based on environment
+// const getApiUrl = () => {
+//   // For production
+//   if (process.env.NODE_ENV === "production") {
+//     return (
+//       process.env.NEXT_PUBLIC_API_URL || "https://api.osheenoracle.com/api"
+//     );
+//   }
+//   // For development
+//   // return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+// };
+
 const getApiUrl = () => {
-  // For production
-  if (process.env.NODE_ENV === "production") {
-    return (
-      process.env.NEXT_PUBLIC_API_URL || "https://api.osheenoracle.com/api"
-    );
-  }
-  // For development
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  // 🔴 Local
+  // return "http://localhost:5000/api";
+
+  // 🟢 Live
+  return "https://api.osheenoracle.com/api";
 };
 
 const API_BASE_URL = getApiUrl();
