@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import { postData, putData } from "@/utils/api";
+import React, { useState, useRef } from "react";
 import { toast } from "react-hot-toast";
 import {
   Upload,
@@ -14,8 +13,11 @@ import {
   Check,
   Palette,
   Ruler,
+  Link as LinkIcon,
+  Globe,
 } from "lucide-react";
 import Image from "next/image";
+import productAPI from "@/utils/productApi";
 
 /* ======================
    TYPES
@@ -98,13 +100,18 @@ interface AddProductProps {
   onCancel?: () => void;
 }
 
+type UploadMethod = "url" | "local";
+
 export default function AddProduct({
   editProduct,
   onSuccess,
   onCancel,
 }: AddProductProps) {
   const [loading, setLoading] = useState<boolean>(false);
+  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploadMethod, setUploadMethod] = useState<UploadMethod>("url");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize form with editProduct data or empty values
   const [form, setForm] = useState<ProductPayload>({
@@ -154,6 +161,10 @@ export default function AddProduct({
       newErrors.description = "Description is required";
     } else if (form.description.trim().length < 20) {
       newErrors.description = "Description must be at least 20 characters";
+    }
+
+    if (!form.image.trim()) {
+      newErrors.image = "Product image is required";
     }
 
     if (form.hasColorOptions && form.colors.length === 0) {
@@ -215,6 +226,62 @@ export default function AddProduct({
     }
   };
 
+  // Handle local file upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file (JPG, PNG, WebP)");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      // Show local preview immediately
+      const localPreview = URL.createObjectURL(file);
+      setImagePreview(localPreview);
+
+      // Upload to server
+      const uploadedUrl = await productAPI.uploadProductImage(file);
+
+      if (uploadedUrl) {
+        setForm((prev) => ({ ...prev, image: uploadedUrl }));
+        setImagePreview(uploadedUrl);
+        toast.success("Image uploaded successfully!");
+
+        // Clear image error if any
+        if (errors.image) {
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors.image;
+            return newErrors;
+          });
+        }
+      } else {
+        toast.error("Failed to upload image");
+        setImagePreview(DEFAULT_IMAGE);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image");
+      setImagePreview(DEFAULT_IMAGE);
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const handleAddColor = () => {
     if (tempColor.trim()) {
       if (form.colors.includes(tempColor.trim())) {
@@ -231,7 +298,6 @@ export default function AddProduct({
         colors: updatedColors,
       }));
 
-      // Clear color error if any
       if (errors.colors) {
         setErrors((prev) => {
           const newErrors = { ...prev };
@@ -295,37 +361,23 @@ export default function AddProduct({
 
   const getColorHex = (colorName: string) => {
     const color = colorName.toLowerCase();
-    switch (color) {
-      case "white":
-        return "#ffffff";
-      case "black":
-        return "#000000";
-      case "red":
-        return "#ff0000";
-      case "blue":
-        return "#0000ff";
-      case "green":
-        return "#008000";
-      case "yellow":
-        return "#ffff00";
-      case "purple":
-        return "#800080";
-      case "pink":
-        return "#ffc0cb";
-      case "brown":
-        return "#a52a2a";
-      case "gray":
-        return "#808080";
-      case "orange":
-        return "#ffa500";
-      case "navy":
-        return "#000080";
-      default:
-        return "#cccccc";
-    }
+    const colors: Record<string, string> = {
+      white: "#ffffff",
+      black: "#000000",
+      red: "#ff0000",
+      blue: "#0000ff",
+      green: "#008000",
+      yellow: "#ffff00",
+      purple: "#800080",
+      pink: "#ffc0cb",
+      brown: "#a52a2a",
+      gray: "#808080",
+      orange: "#ffa500",
+      navy: "#000080",
+    };
+    return colors[color] || "#cccccc";
   };
 
-  // Reset form to initial state
   const resetFormToInitial = () => {
     const initialForm = {
       name: "",
@@ -345,18 +397,17 @@ export default function AddProduct({
     setTempColor("");
     setTempSize("");
     setErrors({});
+    setUploadMethod("url");
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Validate form
     if (!validateForm()) {
       toast.error("❌ Please fix the errors before submitting");
       return;
     }
 
-    // Calculate discount percentage
     const discount =
       form.originalPrice > form.price
         ? Math.round(
@@ -364,7 +415,6 @@ export default function AddProduct({
           ) + "%"
         : "0%";
 
-    // Prepare payload according to backend expectations
     const payload: ProductPayload = {
       name: form.name.trim(),
       price: Number(form.price.toFixed(2)),
@@ -372,7 +422,7 @@ export default function AddProduct({
         form.originalPrice > 0
           ? Number(form.originalPrice.toFixed(2))
           : Number(form.price.toFixed(2)),
-      image: form.image.trim() ? form.image.trim() : DEFAULT_IMAGE,
+      image: form.image.trim(),
       description: form.description.trim(),
       category: form.category,
       inStock: form.inStock,
@@ -385,87 +435,53 @@ export default function AddProduct({
       setLoading(true);
 
       if (editProduct?._id) {
-        await putData(`/products/${editProduct._id}`, payload);
-        toast.success("✅ Product updated successfully!", {
-          duration: 4000,
-          position: "top-center",
-          style: {
-            background: "#10B981",
-            color: "#fff",
-            fontWeight: "bold",
-            padding: "16px",
-            borderRadius: "8px",
-          },
-          icon: "🎉",
-        });
+        // Update existing product
+        const updated = await productAPI.updateProduct(
+          editProduct._id,
+          payload,
+        );
+        if (updated) {
+          toast.success("✅ Product updated successfully!");
+          if (onSuccess) {
+            setTimeout(() => {
+              onSuccess();
+            }, 500);
+          } else {
+            // If no onSuccess callback, reset form
+            resetFormToInitial();
+          }
+        } else {
+          toast.error("❌ Failed to update product");
+        }
       } else {
-        await postData("/products", payload);
-        toast.success("✅ Product created successfully!", {
-          duration: 4000,
-          position: "top-center",
-          style: {
-            background: "#10B981",
-            color: "#fff",
-            fontWeight: "bold",
-            padding: "16px",
-            borderRadius: "8px",
-          },
-          icon: "🎉",
-        });
-
-        // Reset form ONLY for new product
-        resetFormToInitial();
-
-        toast.success("✅ Form has been reset for new product!", {
-          duration: 3000,
-          position: "top-center",
-          icon: "🔄",
-          style: {
-            background: "#3B82F6",
-            color: "#fff",
-            padding: "12px",
-            borderRadius: "8px",
-          },
-        });
+        // Create new product
+        const created = await productAPI.createProduct(payload);
+        if (created) {
+          toast.success("🎉 Product created successfully!");
+          resetFormToInitial();
+          if (onSuccess) {
+            setTimeout(() => {
+              onSuccess();
+            }, 500);
+          }
+        } else {
+          toast.error("❌ Failed to create product");
+        }
       }
-
-      // Call onSuccess callback if provided
-      if (onSuccess) {
-        setTimeout(() => {
-          onSuccess();
-        }, 500);
-      }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Product submission error:", error);
-
-      // Show specific error messages based on backend response
       let errorMessage = "Failed to save product. Please try again";
 
-      if (
-        error.message?.includes("Validation Error") ||
-        error.message?.includes("required")
-      ) {
-        errorMessage = "❌ Validation Error: Please check all required fields";
-      } else if (error.message?.includes("already exists")) {
-        errorMessage = "❌ Product with this name already exists";
-      } else if (error.response?.status === 401) {
-        errorMessage = "❌ Session expired. Please login again";
-      } else if (error.response?.status === 403) {
-        errorMessage = "❌ You don't have permission to add products";
+      if (error instanceof Error) {
+        if (error.message.includes("Validation Error")) {
+          errorMessage =
+            "❌ Validation Error: Please check all required fields";
+        } else if (error.message.includes("already exists")) {
+          errorMessage = "❌ Product with this name already exists";
+        }
       }
 
-      toast.error(errorMessage, {
-        duration: 4000,
-        position: "top-center",
-        style: {
-          background: "#EF4444",
-          color: "#fff",
-          fontWeight: "bold",
-          padding: "16px",
-          borderRadius: "8px",
-        },
-      });
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -473,7 +489,6 @@ export default function AddProduct({
 
   const resetForm = () => {
     if (editProduct?._id) {
-      // For edit mode, reset to original values
       setForm({
         name: editProduct.name || "",
         price: editProduct.price || 0,
@@ -488,34 +503,16 @@ export default function AddProduct({
       });
       setImagePreview(editProduct.image || DEFAULT_IMAGE);
     } else {
-      // For add mode, clear everything
       resetFormToInitial();
     }
-
     setErrors({});
-
-    toast.success("Form reset successfully!", {
-      duration: 2000,
-      position: "top-center",
-      icon: "🔄",
-      style: {
-        background: "#3B82F6",
-        color: "#fff",
-        padding: "12px",
-        borderRadius: "8px",
-      },
-    });
+    toast.success("Form reset successfully!");
 
     if (onCancel) {
-      setTimeout(() => {
-        onCancel();
-      }, 300);
+      setTimeout(() => onCancel(), 300);
     }
   };
 
-  /* ======================
-     UI
-  ====================== */
   return (
     <div className="max-w-6xl mx-auto my-8">
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
@@ -540,20 +537,53 @@ export default function AddProduct({
 
         <div className="p-8">
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Two Column Layout */}
             <div className="grid lg:grid-cols-3 gap-8">
-              {/* Left Column - Image Preview */}
+              {/* Left Column - Image Upload */}
               <div className="lg:col-span-1">
                 <div className="sticky top-8">
                   <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                     <div className="flex items-center gap-2 mb-4">
                       <ImageIcon className="h-5 w-5 text-gray-600" />
                       <h3 className="font-semibold text-gray-700">
-                        Image Preview
+                        Product Image
                       </h3>
                     </div>
 
-                    <div className="aspect-square rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-white mb-4">
+                    {/* Upload Method Toggle */}
+                    <div className="flex gap-2 mb-4 bg-white rounded-lg p-1 border border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => setUploadMethod("url")}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                          uploadMethod === "url"
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        <Globe className="h-4 w-4" />
+                        URL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUploadMethod("local")}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                          uploadMethod === "local"
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload
+                      </button>
+                    </div>
+
+                    {/* Image Preview */}
+                    <div className="aspect-square rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-white mb-4 relative">
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        </div>
+                      )}
                       <Image
                         src={imagePreview}
                         alt="Preview"
@@ -566,14 +596,46 @@ export default function AddProduct({
                       />
                     </div>
 
-                    <div className="space-y-3">
+                    {/* URL Input */}
+                    {uploadMethod === "url" ? (
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <LinkIcon className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                          <input
+                            name="image"
+                            value={form.image}
+                            onChange={handleChange}
+                            placeholder="https://example.com/images/product.jpg"
+                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                              errors.image
+                                ? "border-red-500"
+                                : "border-gray-300"
+                            }`}
+                          />
+                        </div>
+                        {errors.image && (
+                          <p className="text-sm text-red-600">{errors.image}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Supported formats: JPG, PNG, WebP. Max size: 5MB
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-4 space-y-2">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <div className="h-2 w-2 rounded-full bg-blue-500"></div>
                         <span>Recommended size: 600x400px</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                        <span>Supports JPG, PNG, WebP</span>
                       </div>
                     </div>
                   </div>
@@ -677,25 +739,6 @@ export default function AddProduct({
                           </div>
                         </div>
                       </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Image URL
-                        </label>
-                        <div className="relative">
-                          <Upload className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
-                          <input
-                            name="image"
-                            value={form.image}
-                            onChange={handleChange}
-                            placeholder="https://example.com/images/product.jpg"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                          />
-                        </div>
-                        <p className="mt-2 text-sm text-gray-500">
-                          Leave empty to use default image
-                        </p>
-                      </div>
                     </div>
                   </div>
 
@@ -771,20 +814,15 @@ export default function AddProduct({
                             {errors.originalPrice}
                           </p>
                         )}
-                        <p className="mt-2 text-sm text-gray-500">
-                          For discounted products. Leave empty to use selling
-                          price.
-                        </p>
                       </div>
                     </div>
 
-                    {/* Price Summary */}
                     {form.originalPrice > form.price && (
                       <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-100 rounded-lg">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div>
                             <span className="text-gray-700 font-medium">
-                              You&rsquo;re offering:
+                              You&apos;re offering:
                             </span>
                             <p className="text-sm text-gray-600 mt-1">
                               {Math.round(
@@ -873,80 +911,61 @@ export default function AddProduct({
                                 Add
                               </button>
                             </div>
-                            {errors.colors && (
-                              <p className="text-sm text-red-600">
-                                {errors.colors}
-                              </p>
-                            )}
 
-                            {form.colors.length > 0 ? (
-                              <div className="space-y-3">
-                                <p className="text-sm text-gray-600">
-                                  Selected colors:
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                  {form.colors.map((color) => (
-                                    <div
-                                      key={color}
-                                      className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"
-                                    >
-                                      <div
-                                        className="w-4 h-4 rounded-full border border-gray-300"
-                                        style={{
-                                          backgroundColor: getColorHex(color),
-                                        }}
-                                      />
-                                      <span className="text-sm font-medium text-gray-700">
-                                        {color}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveColor(color)}
-                                        className="ml-2 text-gray-400 hover:text-red-500 transition-colors"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-sm text-gray-500 italic">
-                                No colors added yet
-                              </p>
-                            )}
-
-                            <div className="mt-4">
-                              <p className="text-sm text-gray-600 mb-2">
-                                Quick add common colors:
-                              </p>
+                            {form.colors.length > 0 && (
                               <div className="flex flex-wrap gap-2">
-                                {COMMON_COLORS.map((color) => (
-                                  <button
+                                {form.colors.map((color) => (
+                                  <div
                                     key={color}
-                                    type="button"
-                                    onClick={() => {
-                                      if (!form.colors.includes(color)) {
-                                        setForm((prev) => ({
-                                          ...prev,
-                                          colors: [...prev.colors, color],
-                                        }));
-                                      }
-                                    }}
-                                    disabled={form.colors.includes(color)}
-                                    className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
-                                      form.colors.includes(color)
-                                        ? "bg-green-100 text-green-800 border-green-200 cursor-not-allowed"
-                                        : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
-                                    }`}
+                                    className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"
                                   >
-                                    {color}
-                                    {form.colors.includes(color) && (
-                                      <Check className="h-3 w-3 inline ml-1" />
-                                    )}
-                                  </button>
+                                    <div
+                                      className="w-4 h-4 rounded-full border border-gray-300"
+                                      style={{
+                                        backgroundColor: getColorHex(color),
+                                      }}
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">
+                                      {color}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveColor(color)}
+                                      className="ml-2 text-gray-400 hover:text-red-500 transition-colors"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </div>
                                 ))}
                               </div>
+                            )}
+
+                            <div className="flex flex-wrap gap-2">
+                              {COMMON_COLORS.map((color) => (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  onClick={() => {
+                                    if (!form.colors.includes(color)) {
+                                      setForm((prev) => ({
+                                        ...prev,
+                                        colors: [...prev.colors, color],
+                                      }));
+                                    }
+                                  }}
+                                  disabled={form.colors.includes(color)}
+                                  className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
+                                    form.colors.includes(color)
+                                      ? "bg-green-100 text-green-800 border-green-200 cursor-not-allowed"
+                                      : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
+                                  }`}
+                                >
+                                  {color}
+                                  {form.colors.includes(color) && (
+                                    <Check className="h-3 w-3 inline ml-1" />
+                                  )}
+                                </button>
+                              ))}
                             </div>
                           </div>
                         )}
@@ -958,9 +977,6 @@ export default function AddProduct({
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Size Options
                           </label>
-                          <div className="text-sm text-gray-600 mb-4">
-                            Add available sizes for this product
-                          </div>
                         </div>
 
                         <div className="flex gap-2">
@@ -986,76 +1002,59 @@ export default function AddProduct({
                             Add
                           </button>
                         </div>
-                        {errors.size && (
-                          <p className="text-sm text-red-600">{errors.size}</p>
-                        )}
 
-                        {form.sizeOptions.length > 0 ? (
-                          <div className="space-y-3">
-                            <p className="text-sm text-gray-600">
-                              Available sizes:
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {form.sizeOptions.map((size) => (
-                                <div
-                                  key={size}
-                                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"
-                                >
-                                  <Ruler className="h-4 w-4 text-gray-500" />
-                                  <span className="text-sm font-medium text-gray-700">
-                                    Size {size}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveSize(size)}
-                                    className="ml-2 text-gray-400 hover:text-red-500 transition-colors"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-500 italic">
-                            No sizes added yet
-                          </p>
-                        )}
-
-                        <div className="mt-4">
-                          <p className="text-sm text-gray-600 mb-2">
-                            Quick add common sizes:
-                          </p>
+                        {form.sizeOptions.length > 0 && (
                           <div className="flex flex-wrap gap-2">
-                            {COMMON_SIZES.map((size) => (
-                              <button
+                            {form.sizeOptions.map((size) => (
+                              <div
                                 key={size}
-                                type="button"
-                                onClick={() => {
-                                  if (!form.sizeOptions.includes(size)) {
-                                    setForm((prev) => ({
-                                      ...prev,
-                                      sizeOptions: [
-                                        ...prev.sizeOptions,
-                                        size,
-                                      ].sort((a, b) => a - b),
-                                    }));
-                                  }
-                                }}
-                                disabled={form.sizeOptions.includes(size)}
-                                className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
-                                  form.sizeOptions.includes(size)
-                                    ? "bg-green-100 text-green-800 border-green-200 cursor-not-allowed"
-                                    : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
-                                }`}
+                                className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"
                               >
-                                Size {size}
-                                {form.sizeOptions.includes(size) && (
-                                  <Check className="h-3 w-3 inline ml-1" />
-                                )}
-                              </button>
+                                <Ruler className="h-4 w-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Size {size}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveSize(size)}
+                                  className="ml-2 text-gray-400 hover:text-red-500 transition-colors"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
                             ))}
                           </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2">
+                          {COMMON_SIZES.map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => {
+                                if (!form.sizeOptions.includes(size)) {
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    sizeOptions: [
+                                      ...prev.sizeOptions,
+                                      size,
+                                    ].sort((a, b) => a - b),
+                                  }));
+                                }
+                              }}
+                              disabled={form.sizeOptions.includes(size)}
+                              className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
+                                form.sizeOptions.includes(size)
+                                  ? "bg-green-100 text-green-800 border-green-200 cursor-not-allowed"
+                                  : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
+                              }`}
+                            >
+                              Size {size}
+                              {form.sizeOptions.includes(size) && (
+                                <Check className="h-3 w-3 inline ml-1" />
+                              )}
+                            </button>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -1093,12 +1092,6 @@ export default function AddProduct({
                       <div className="mt-2 flex justify-between items-center">
                         <p className="text-sm text-gray-500">
                           {form.description.length} characters
-                          {errors.description && (
-                            <span className="text-red-600">
-                              {" "}
-                              - {errors.description}
-                            </span>
-                          )}
                         </p>
                         <p className="text-sm text-gray-500">
                           Minimum 20 characters recommended
@@ -1128,13 +1121,17 @@ export default function AddProduct({
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || uploadingImage}
                   className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {loading ? (
+                  {loading || uploadingImage ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      {editProduct?._id ? "Updating..." : "Adding..."}
+                      {uploadingImage
+                        ? "Uploading..."
+                        : editProduct?._id
+                          ? "Updating..."
+                          : "Adding..."}
                     </>
                   ) : editProduct?._id ? (
                     <>

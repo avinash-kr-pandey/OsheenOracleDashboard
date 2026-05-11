@@ -2,49 +2,24 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { fetchData, deleteData } from "@/utils/api";
 import { toast } from "react-hot-toast";
-import AddProduct from "../add/page";
 import {
   Search,
   Filter,
   RefreshCw,
   Plus,
-  Eye,
   Edit2,
   Trash2,
-  MoreVertical,
-  Tag,
-  TrendingUp,
   Package,
   DollarSign,
   BarChart,
+  TrendingUp,
   Grid,
   List,
+  X,
 } from "lucide-react";
-
-/* ======================
-   TYPES
-====================== */
-
-interface Product {
-  _id: string;
-  name: string;
-  price: number;
-  originalPrice: number;
-  image: string;
-  description: string;
-  inStock?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  __v?: number;
-}
-
-interface ProductsResponse {
-  success: boolean;
-  count: number;
-  data: Product[];
-}
+import productAPI, { Product } from "@/utils/productApi";
+import AddProduct from "../add/page";
 
 /* ======================
    COMPONENT
@@ -59,23 +34,14 @@ export default function ViewProduct() {
   const [sortBy, setSortBy] = useState<string>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  /* ======================
-     FETCH PRODUCTS
-  ====================== */
   const loadProducts = async (): Promise<void> => {
     try {
       setLoading(true);
-      const res = await fetchData<ProductsResponse>("/products");
-
-      if (res.success && res.data) {
-        setProducts(res.data);
-      } else {
-        setProducts([]);
-      }
+      const data = await productAPI.getProducts();
+      setProducts(data);
     } catch (error) {
       toast.error("❌ Failed to fetch products");
       console.error(error);
-      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -85,40 +51,51 @@ export default function ViewProduct() {
     loadProducts();
   }, []);
 
-  /* ======================
-     DELETE PRODUCT
-  ====================== */
   const handleDelete = async (id: string): Promise<void> => {
     if (!window.confirm("Are you sure you want to delete this product?"))
       return;
 
     try {
-      await deleteData(`/products/${id}`);
-      toast.success("🗑️ Product deleted successfully");
-      loadProducts();
+      const success = await productAPI.deleteProduct(id);
+      if (success) {
+        toast.success("🗑️ Product deleted successfully");
+        await loadProducts(); // Refresh the list after deletion
+      } else {
+        toast.error("❌ Failed to delete product");
+      }
     } catch (error) {
       toast.error("❌ Failed to delete product");
       console.error(error);
     }
   };
 
-  /* ======================
-     EDIT PRODUCT - FIXED
-  ====================== */
   const handleEdit = (product: Product): void => {
     setEditProduct(product);
     setShowAddForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    // Show edit mode toast
+    toast.success(`✏️ Editing: ${product.name}`);
   };
 
-  /* ======================
-     FILTER & SORT
-  ====================== */
+  const handleFormSuccess = (): void => {
+    // Refresh products list after successful add/edit
+    loadProducts();
+    setEditProduct(null);
+    setShowAddForm(false);
+    // Success toast is already shown in AddProduct component
+  };
+
+  const handleFormCancel = (): void => {
+    setEditProduct(null);
+    setShowAddForm(false);
+    toast.success("Operation cancelled");
+  };
+
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.description &&
-        p.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        p.description.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -144,9 +121,6 @@ export default function ViewProduct() {
     }
   });
 
-  /* ======================
-     STATS CALCULATION
-  ====================== */
   const stats = {
     totalProducts: products.length,
     totalValue: products.reduce((sum, p) => sum + p.price, 0),
@@ -159,9 +133,6 @@ export default function ViewProduct() {
       .length,
   };
 
-  /* ======================
-     UI
-  ====================== */
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {/* Header */}
@@ -187,8 +158,18 @@ export default function ViewProduct() {
 
             <button
               onClick={() => {
-                setEditProduct(null);
+                if (showAddForm && editProduct) {
+                  // If editing, confirm before switching
+                  if (window.confirm("Cancel editing and start fresh?")) {
+                    setEditProduct(null);
+                  } else {
+                    return;
+                  }
+                }
                 setShowAddForm(!showAddForm);
+                if (!showAddForm) {
+                  toast.success("Fill in the form to add a new product");
+                }
               }}
               className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
             >
@@ -258,23 +239,25 @@ export default function ViewProduct() {
         </div>
       </div>
 
-      {/* Add/Edit Form - यहाँ AddProduct component show होगा */}
+      {/* Add/Edit Form */}
       {showAddForm && (
-        <AddProduct
-          editProduct={editProduct}
-          onSuccess={() => {
-            loadProducts();
-            setEditProduct(null);
-            setShowAddForm(false);
-            toast.success(
-              editProduct ? "✅ Product updated!" : "🎉 Product added!"
-            );
-          }}
-          onCancel={() => {
-            setEditProduct(null);
-            setShowAddForm(false);
-          }}
-        />
+        <div className="mb-8 relative">
+          <button
+            onClick={() => {
+              setShowAddForm(false);
+              setEditProduct(null);
+              toast.success("Form closed");
+            }}
+            className="absolute top-4 right-4 z-10 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
+          >
+            <X className="h-5 w-5 text-gray-600" />
+          </button>
+          <AddProduct
+            editProduct={editProduct || undefined}
+            onSuccess={handleFormSuccess}
+            onCancel={handleFormCancel}
+          />
+        </div>
       )}
 
       {/* Filters Bar */}
@@ -374,7 +357,11 @@ export default function ViewProduct() {
             </p>
             {!searchTerm && (
               <button
-                onClick={() => setShowAddForm(true)}
+                onClick={() => {
+                  setEditProduct(null);
+                  setShowAddForm(true);
+                  toast.success("Let's add your first product!");
+                }}
                 className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all inline-flex items-center gap-2"
               >
                 <Plus className="h-5 w-5" />
@@ -390,7 +377,6 @@ export default function ViewProduct() {
               key={product._id}
               className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
             >
-              {/* Product Image */}
               <div className="relative h-48 bg-gray-100">
                 <Image
                   src={
@@ -415,17 +401,10 @@ export default function ViewProduct() {
                 </div>
               </div>
 
-              {/* Product Info */}
               <div className="p-6">
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-semibold text-gray-800 line-clamp-1">
-                    {product.name}
-                  </h3>
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <MoreVertical className="h-5 w-5" />
-                  </button>
-                </div>
-
+                <h3 className="font-semibold text-gray-800 line-clamp-1 mb-2">
+                  {product.name}
+                </h3>
                 <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                   {product.description || "No description available"}
                 </p>
@@ -446,14 +425,13 @@ export default function ViewProduct() {
                       <span className="text-xs text-green-600 font-medium">
                         Save ₹
                         {(product.originalPrice - product.price).toLocaleString(
-                          "en-IN"
+                          "en-IN",
                         )}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Actions - EDIT BUTTON FIXED */}
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(product)}
@@ -475,7 +453,6 @@ export default function ViewProduct() {
           ))}
         </div>
       ) : (
-        /* List View */
         <div className="bg-white rounded-2xl overflow-hidden border border-gray-200">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -522,9 +499,11 @@ export default function ViewProduct() {
                           <p className="text-sm text-gray-600 mt-1 line-clamp-1">
                             {product.description || "No description"}
                           </p>
-                          <span className="text-xs text-gray-500 mt-2 block">
-                            ID: {product._id.substring(0, 8)}...
-                          </span>
+                          {product.category && (
+                            <span className="text-xs text-gray-500 mt-2 inline-block">
+                              Category: {product.category}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -534,38 +513,22 @@ export default function ViewProduct() {
                           ₹{product.price.toLocaleString("en-IN")}
                         </div>
                         {product.originalPrice > product.price && (
-                          <>
-                            <div className="text-sm text-gray-500 line-through">
-                              ₹{product.originalPrice.toLocaleString("en-IN")}
-                            </div>
-                            <div className="text-xs text-green-600 font-medium">
-                              Save ₹
-                              {(
-                                product.originalPrice - product.price
-                              ).toLocaleString("en-IN")}
-                            </div>
-                          </>
+                          <div className="text-sm text-gray-500 line-through">
+                            ₹{product.originalPrice.toLocaleString("en-IN")}
+                          </div>
                         )}
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex flex-col gap-2">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium w-fit ${
-                            product.inStock
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {product.inStock ? "In Stock" : "Out of Stock"}
-                        </span>
-                        {product.createdAt && (
-                          <span className="text-xs text-gray-500">
-                            Added:{" "}
-                            {new Date(product.createdAt).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium w-fit inline-block ${
+                          product.inStock
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {product.inStock ? "In Stock" : "Out of Stock"}
+                      </span>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">
@@ -589,35 +552,6 @@ export default function ViewProduct() {
                 ))}
               </tbody>
             </table>
-          </div>
-
-          {/* Footer Summary */}
-          <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="text-sm text-gray-600">
-                Showing {sortedProducts.length} of {products.length} products
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">Average Price</p>
-                  <p className="font-semibold text-gray-800">
-                    ₹{Math.round(stats.averagePrice).toLocaleString("en-IN")}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">Total Value</p>
-                  <p className="font-semibold text-gray-800">
-                    ₹{stats.totalValue.toLocaleString("en-IN")}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">Discounted</p>
-                  <p className="font-semibold text-gray-800">
-                    {stats.discountedProducts}
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}

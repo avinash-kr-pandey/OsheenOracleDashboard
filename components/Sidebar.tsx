@@ -406,7 +406,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       submenu: [
         { name: "Spells", href: "/dashboard/services/spells" },
         { name: "Reading", href: "/dashboard/services/reading" },
-        {name: "Services Package", href: "/dashboard/services/package"}
+        { name: "Services Package", href: "/dashboard/services/package" },
       ],
     },
     {
@@ -434,6 +434,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: "Add Astrologer", href: "/dashboard/astrologer/add" },
         { name: "View Astrologer", href: "/dashboard/astrologer/view" },
       ],
+    },
+
+    {
+      name: "Contact",
+      href: "/dashboard/contact",
+      icon: <FiBarChart2 />,
+      color: "text-purple-400",
     },
     {
       name: "Horoscope Main",

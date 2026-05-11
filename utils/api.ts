@@ -1,16 +1,37 @@
 import axios, { AxiosError, AxiosResponse } from "axios";
 
-const API_BASE_URL = "https://api.osheenoracle.com/api";
-// const API_BASE_URL = "http://localhost:5000/api";
+// ✅ Dynamic API URL based on environment
+// const getApiUrl = () => {
+//   // For production
+//   if (process.env.NODE_ENV === "production") {
+//     return (
+//       process.env.NEXT_PUBLIC_API_URL || "https://api.osheenoracle.com/api"
+//     );
+//   }
+//   // For development
+//   // return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+// };
+
+const getApiUrl = () => {
+  // 🔴 Local
+  // return "http://localhost:5000/api";
+
+  // 🟢 Live
+  return "https://api.osheenoracle.com/api";
+};
+
+const API_BASE_URL = getApiUrl();
+
+console.log("🔧 API Base URL:", API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased timeout for file uploads
   headers: {
-
     "Content-Type": "application/json",
   },
-  withCredentials: false,
+  // ✅ IMPORTANT: Enable credentials for cookies/session
+  withCredentials: true,
 });
 
 // Request interceptor
@@ -24,10 +45,15 @@ api.interceptors.request.use(
 
       // ✅ FIX: GET requests se cache headers hatao
       if (config.method?.toLowerCase() === "get") {
-        // Sirf Authorization header rakho, cache headers hatao
         delete config.headers["Cache-Control"];
         delete config.headers["Pragma"];
         delete config.headers["Expires"];
+      }
+
+      // ✅ For multipart/form-data (file uploads), remove Content-Type header
+      // Let browser set it automatically with boundary
+      if (config.data instanceof FormData) {
+        delete config.headers["Content-Type"];
       }
     }
     return config;
@@ -42,7 +68,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
         const currentPath = window.location.pathname;
-        if (currentPath !== "/login") {
+        if (currentPath !== "/login" && !currentPath.includes("/admin")) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           window.location.replace("/login");
@@ -97,6 +123,27 @@ export const postData = async <T = unknown>(
 };
 
 /* =======================
+   POST FORM DATA (for file uploads)
+======================= */
+export const postFormData = async <T = unknown>(
+  endpoint: string,
+  formData: FormData,
+): Promise<T> => {
+  try {
+    const response: AxiosResponse<T> = await api.post(endpoint, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    const err = error as AxiosError;
+    console.error("POST FormData Error:", err.response?.data || err.message);
+    throw err;
+  }
+};
+
+/* =======================
    PUT
 ======================= */
 export const putData = async <T = unknown>(
@@ -114,7 +161,7 @@ export const putData = async <T = unknown>(
 };
 
 /* =======================
-   PATCH (NEW)
+   PATCH
 ======================= */
 export const patchData = async <T = unknown>(
   endpoint: string,
@@ -141,6 +188,37 @@ export const deleteData = async <T = unknown>(endpoint: string): Promise<T> => {
     const err = error as AxiosError;
     console.error("DELETE Error:", err.response?.data || err.message);
     throw err;
+  }
+};
+
+/* =======================
+   FILE UPLOAD HELPER
+======================= */
+export const uploadFile = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await postFormData<{
+      success: boolean;
+      message?: string;
+      file: {
+        url: string;
+        filename: string;
+        originalname: string;
+        mimetype: string;
+        size: number;
+        type: string;
+      };
+    }>("/uploads/file-upload", formData);
+
+    if (response.success && response.file?.url) {
+      return response.file.url;
+    }
+    throw new Error(response.message || "Upload failed");
+  } catch (error) {
+    console.error("Upload error:", error);
+    throw error;
   }
 };
 
