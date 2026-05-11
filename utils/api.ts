@@ -226,4 +226,55 @@ export const horoscopeAPI = {
   },
 };
 
+/* =======================
+   CONTACT ENDPOINTS
+======================= */
+
+export interface Contact {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContactResponse {
+  success: boolean;
+  data: Contact[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}
+
+/* =======================
+   ANNOUNCEMENT ENDPOINTS
+======================= */
+
+export interface Announcement {
+  _id: string;
+  content: string;
+  isActive: boolean;
+  link: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface AnnouncementResponse {
+  success: boolean;
+  data: Announcement;
+  message?: string;
+}
+
+export interface AnnouncementsListResponse {
+  success: boolean;
+  data: Announcement[];
+}
+
+
 export default api;

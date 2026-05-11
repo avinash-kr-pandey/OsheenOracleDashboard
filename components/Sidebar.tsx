@@ -15,6 +15,8 @@ import {
   FiStar,
   FiSettings,
   FiLogOut,
+  FiPhone,
+  FiBell,
 } from "react-icons/fi";
 import { fetchData, setAuthToken } from "@/utils/api";
 
@@ -341,6 +343,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/dashboard/users",
       icon: <FiUsers />,
       color: "text-green-400",
+    },
+    {
+      name: "Contacts",
+      href: "/dashboard/contacts",
+      icon: <FiPhone />,
+      color: "text-blue-300",
+    },
+    {
+      name: "Announcements",
+      href: "/dashboard/announcements",
+      icon: <FiBell />,
+      color: "text-purple-300",
     },
     {
       name: "About Us",
