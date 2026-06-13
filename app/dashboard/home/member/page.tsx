@@ -152,7 +152,7 @@ const Member = () => {
     if (type === "add") {
       setFormData(getDefaultFormData(section));
     } else if (item) {
-      setFormData(item as Record<string, unknown>);
+      setFormData(item as unknown as Record<string, unknown>);
     }
     setImageFile(null);
     setImagePreview("");
@@ -271,12 +271,12 @@ const Member = () => {
           };
           if (dialogType === "add") {
             response = await membershipAdminApi.createPlan(
-              data as Omit<MembershipPlan, "_id" | "createdAt" | "updatedAt">,
+              data as any,
             );
           } else {
             response = await membershipAdminApi.updatePlan(
               (selectedItem as MembershipPlan)?._id || "",
-              data as Partial<MembershipPlan>,
+              data as any,
             );
           }
           break;
@@ -288,12 +288,12 @@ const Member = () => {
           };
           if (dialogType === "add") {
             response = await membershipAdminApi.createBenefit(
-              data as Omit<Benefit, "_id" | "createdAt" | "updatedAt">,
+              data as any,
             );
           } else {
             response = await membershipAdminApi.updateBenefit(
               (selectedItem as Benefit)?._id || "",
-              data as Partial<Benefit>,
+              data as any,
             );
           }
           break;
@@ -305,12 +305,12 @@ const Member = () => {
           };
           if (dialogType === "add") {
             response = await membershipAdminApi.createTestimonial(
-              data as Omit<Testimonial, "_id" | "createdAt" | "updatedAt">,
+              data as any,
             );
           } else {
             response = await membershipAdminApi.updateTestimonial(
               (selectedItem as Testimonial)?._id || "",
-              data as Partial<Testimonial>,
+              data as any,
             );
           }
           break;
@@ -322,12 +322,12 @@ const Member = () => {
           };
           if (dialogType === "add") {
             response = await membershipAdminApi.createAddOn(
-              data as Omit<AddOn, "_id" | "createdAt" | "updatedAt">,
+              data as any,
             );
           } else {
             response = await membershipAdminApi.updateAddOn(
               (selectedItem as AddOn)?._id || "",
-              data as Partial<AddOn>,
+              data as any,
             );
           }
           break;
@@ -339,12 +339,12 @@ const Member = () => {
           };
           if (dialogType === "add") {
             response = await membershipAdminApi.createStat(
-              data as Omit<Stat, "_id" | "createdAt" | "updatedAt">,
+              data as any,
             );
           } else {
             response = await membershipAdminApi.updateStat(
               (selectedItem as Stat)?._id || "",
-              data as Partial<Stat>,
+              data as any,
             );
           }
           break;

@@ -321,7 +321,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   const navItems: NavItem[] = [
-    { name: "Dashboard", href: "/", icon: <FiHome />, color: "text-blue-400" },
+    { name: "Dashboard", href: "/dashboard", icon: <FiHome />, color: "text-blue-400" },
     {
       name: "Home",
       href: "/dashboard/home",

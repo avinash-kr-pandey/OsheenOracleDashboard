@@ -66,7 +66,7 @@ const AddOrder = () => {
       
       // Redirect to view page after success
       setTimeout(() => {
-        router.push('/orders/view');
+        router.push('/dashboard/orders/view');
       }, 1500);
       
     } catch (error: any) {
@@ -216,11 +216,11 @@ const AddOrder = () => {
                 <div className="font-medium">{formData.quantity}</div>
                 
                 <div className="text-gray-600">Price per unit:</div>
-                <div className="font-medium">${formData.price.toFixed(2)}</div>
+                <div className="font-medium">₹{formData.price.toLocaleString('en-IN')}</div>
                 
                 <div className="text-gray-600">Total Amount:</div>
                 <div className="font-bold text-lg text-green-600">
-                  ${((formData.price || 0) * (formData.quantity || 1)).toFixed(2)}
+                  ₹{((formData.price || 0) * (formData.quantity || 1)).toLocaleString('en-IN')}
                 </div>
                 
                 <div className="text-gray-600">Status:</div>

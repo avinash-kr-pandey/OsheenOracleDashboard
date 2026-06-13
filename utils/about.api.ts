@@ -14,6 +14,7 @@ export interface Stat {
 export interface Section {
   title: string;
   content: string;
+  image?: string;
   _id?: string; // Backend _id field optional
 }
 

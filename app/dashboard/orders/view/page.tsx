@@ -36,6 +36,7 @@ const ViewOrders = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [statusUpdate, setStatusUpdate] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   // Fetch orders on component mount
   useEffect(() => {
@@ -212,8 +213,9 @@ const ViewOrders = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   };
 
@@ -486,8 +488,7 @@ const ViewOrders = () => {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => {
-                                  // View order details
-                                  router.push(`/orders/${order._id}`);
+                                  setSelectedOrder(order);
                                 }}
                                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
                               >
@@ -531,6 +532,134 @@ const ViewOrders = () => {
                   className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
                 >
                   Delete Order
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Order Details Modal */}
+        {selectedOrder && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+            <div className="bg-gradient-to-br from-slate-900 via-gray-900 to-slate-900 border border-gray-700 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden text-white transform scale-100 transition-all">
+              {/* Header */}
+              <div className="p-6 border-b border-gray-800 bg-gray-900/50 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+                    Order Details
+                  </h3>
+                  <p className="text-gray-400 text-xs mt-1">ID: {selectedOrder._id}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedOrder(null);
+                    setStatusUpdate('');
+                  }}
+                  className="text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 p-2 rounded-full transition"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  {selectedOrder.image ? (
+                    <img
+                      src={selectedOrder.image}
+                      alt={selectedOrder.productName}
+                      className="w-32 h-32 rounded-xl object-cover border border-gray-700 shadow-md flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                      <span className="text-amber-500 font-bold text-3xl">
+                        {selectedOrder.productName?.charAt(0)?.toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 flex-1">
+                    <h4 className="text-2xl font-bold text-gray-100">
+                      {selectedOrder.productName}
+                    </h4>
+                    
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300">
+                      <div>Price per Unit:</div>
+                      <div className="font-semibold text-white">{formatCurrency(selectedOrder.price)}</div>
+                      
+                      <div>Quantity:</div>
+                      <div className="font-semibold text-white">{selectedOrder.quantity || 1}</div>
+                      
+                      <div>Total Amount:</div>
+                      <div className="font-bold text-green-400 text-lg">
+                        {formatCurrency((selectedOrder.price || 0) * (selectedOrder.quantity || 1))}
+                      </div>
+                      
+                      <div>Order Date:</div>
+                      <div className="text-gray-400">{formatDate(selectedOrder.createdAt)}</div>
+
+                      <div>User ID:</div>
+                      <div className="text-gray-400 font-mono text-xs truncate" title={selectedOrder.user}>
+                        {selectedOrder.user || 'Guest User'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedOrder.description && (
+                  <div className="bg-gray-800/40 border border-gray-800 p-4 rounded-xl">
+                    <h5 className="text-sm font-semibold text-gray-400 mb-2">Order Description / Notes</h5>
+                    <p className="text-sm text-gray-300 leading-relaxed">{selectedOrder.description}</p>
+                  </div>
+                )}
+
+                {/* Status Section inside modal */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-800/20 border border-gray-800 rounded-xl gap-4">
+                  <div>
+                    <span className="text-sm text-gray-400 block mb-1">Current Status</span>
+                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(selectedOrder.status || '')}`}>
+                      {(selectedOrder.status || 'unknown').toUpperCase()}
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <select
+                      value={statusUpdate || selectedOrder.status}
+                      onChange={(e) => setStatusUpdate(e.target.value)}
+                      className="bg-gray-800 border border-gray-700 rounded-lg text-sm px-3 py-2 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                    
+                    <button
+                      onClick={async () => {
+                        await handleStatusUpdate(selectedOrder._id);
+                        setSelectedOrder(prev => prev ? { ...prev, status: statusUpdate || prev.status } : null);
+                      }}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition"
+                    >
+                      Save Status
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-gray-800 bg-gray-900/50 flex justify-end">
+                <button
+                  onClick={() => {
+                    setSelectedOrder(null);
+                    setStatusUpdate('');
+                  }}
+                  className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2.5 rounded-lg text-sm font-medium transition"
+                >
+                  Close Details
                 </button>
               </div>
             </div>

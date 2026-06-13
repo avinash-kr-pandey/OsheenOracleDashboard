@@ -242,7 +242,14 @@ const AboutPage = () => {
             </p>
             <button
               onClick={() => {
-                const defaultData = aboutAPI.initializeDefaultData();
+                const defaultData = {
+                  heroTitle: "About Us",
+                  heroDescription: "Learn more about our mission and vision.",
+                  mission: "",
+                  vision: "",
+                  stats: [{ label: "Happy Clients", value: "1000+" }],
+                  sections: [{ title: "Our Story", content: "", image: "" }],
+                };
                 setFormData(defaultData as any);
                 setIsEditing(true);
               }}
@@ -523,8 +530,11 @@ const AboutPage = () => {
                               alt={section.title}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                  "https://via.placeholder.com/800x400?text=Image+Not+Found";
+                                const target = e.currentTarget;
+                                const svgPlaceholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'><rect width='100%' height='100%' fill='%23f3f4f6'/><path d='M400 170c16.57 0 30-13.43 30-30s-13.43-30-30-30-30 13.43-30 30 13.43 30 30 30zm0 20c-33.14 0-60-26.86-60-60s26.86-60 60-60 60 26.86 60 60-26.86 60-60 60zm0 30c-55.23 0-100 44.77-100 100h200c0-55.23-44.77-100-100-100z' fill='%239ca3af'/><text x='50%' y='85%' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, sans-serif' font-size='18' font-weight='500' fill='%236b7280'>Image Not Found</text></svg>";
+                                if (target.src !== svgPlaceholder) {
+                                  target.src = svgPlaceholder;
+                                }
                               }}
                             />
                           </div>
@@ -862,8 +872,11 @@ const AboutPage = () => {
                                 alt="Preview"
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).src =
-                                    "https://via.placeholder.com/400x200?text=Invalid+Image";
+                                  const target = e.currentTarget;
+                                  const svgPlaceholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'><rect width='100%' height='100%' fill='%23f3f4f6'/><path d='M200 85c8.28 0 15-6.72 15-15s-6.72-15-15-15-15 6.72-15 15 6.72 15 15 15zm0 10c-16.57 0-30-13.43-30-30s13.43-30 30-30 30 13.43 30 30-13.43 30-30 30zm0 15c-27.61 0-50 22.39-50 50h100c0-27.61-22.39-50-50-50z' fill='%239ca3af'/><text x='50%' y='85%' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, sans-serif' font-size='14' font-weight='500' fill='%236b7280'>Invalid Image</text></svg>";
+                                  if (target.src !== svgPlaceholder) {
+                                    target.src = svgPlaceholder;
+                                  }
                                 }}
                               />
                               <button

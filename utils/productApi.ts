@@ -42,6 +42,7 @@ export interface ProductPayload {
   hasColorOptions: boolean;
   colors: string[];
   sizeOptions: number[];
+  discount?: string;
 }
 
 export interface UploadResponse {

@@ -132,7 +132,11 @@ const Images = () => {
                 className="w-full h-48 object-cover cursor-pointer"
                 onClick={() => viewImage(image)}
                 onError={(e) => {
-                  e.currentTarget.src = "/placeholder-image.png";
+                  const target = e.currentTarget;
+                  const svgPlaceholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='100%' height='100%' fill='%23f3f4f6'/><path d='M200 120c11.05 0 20-8.95 20-20s-8.95-20-20-20-20 8.95-20 20 8.95 20 20 20zm0 15c-22.1 0-40-17.9-40-40s17.9-40 40-40 40 17.9 40 40-17.9 40-40 40zm0 20c-36.82 0-66.67 29.85-66.67 66.67h133.34c0-36.82-29.85-66.67-66.67-66.67z' fill='%239ca3af'/><text x='50%' y='85%' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, sans-serif' font-size='12' font-weight='500' fill='%236b7280'>Failed to load image</text></svg>";
+                  if (target.src !== svgPlaceholder) {
+                    target.src = svgPlaceholder;
+                  }
                 }}
               />
               <div className="p-3">

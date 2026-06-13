@@ -13,11 +13,7 @@ import axios, { AxiosError, AxiosResponse } from "axios";
 // };
 
 const getApiUrl = () => {
-  // 🔴 Local
-  // return "http://localhost:5000/api";
-
-  // 🟢 Live
-  return "https://api.osheenoracle.com/api";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 };
 
 const API_BASE_URL = getApiUrl();
