@@ -13,7 +13,7 @@ export interface Product {
   inStock: boolean;
   hasColorOptions: boolean;
   colors: string[];
-  sizeOptions: number[];
+  sizeOptions: string[];
   discount: string;
   averageRating: number;
   reviewCount: number;
@@ -41,7 +41,7 @@ export interface ProductPayload {
   inStock: boolean;
   hasColorOptions: boolean;
   colors: string[];
-  sizeOptions: number[];
+  sizeOptions: string[];
   discount?: string;
 }
 

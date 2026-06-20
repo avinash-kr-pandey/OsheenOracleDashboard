@@ -36,7 +36,7 @@ interface ProductPayload {
   inStock: boolean;
   hasColorOptions: boolean;
   colors: string[];
-  sizeOptions: number[];
+  sizeOptions: string[];
   discount?: string;
 }
 
@@ -92,7 +92,7 @@ const COMMON_COLORS = [
   "Navy",
 ];
 
-const COMMON_SIZES = [6, 7, 8, 9, 10, 11, 12];
+const COMMON_SIZES = ["S", "M", "L", "XL"];
 
 /* ======================
    COMPONENT
@@ -350,17 +350,9 @@ export default function AddProduct({
   };
 
   const handleAddSize = () => {
-    const sizeNum = parseInt(tempSize);
-    if (!isNaN(sizeNum)) {
-      if (sizeNum <= 0) {
-        setErrors((prev) => ({
-          ...prev,
-          size: "Size must be greater than 0",
-        }));
-        return;
-      }
-
-      if (form.sizeOptions.includes(sizeNum)) {
+    const sizeStr = tempSize.trim().toUpperCase();
+    if (sizeStr) {
+      if (form.sizeOptions.includes(sizeStr)) {
         setErrors((prev) => ({
           ...prev,
           size: "Size already exists",
@@ -368,7 +360,7 @@ export default function AddProduct({
         return;
       }
 
-      const updatedSizes = [...form.sizeOptions, sizeNum].sort((a, b) => a - b);
+      const updatedSizes = [...form.sizeOptions, sizeStr];
       setForm((prev) => ({
         ...prev,
         sizeOptions: updatedSizes,
@@ -378,7 +370,7 @@ export default function AddProduct({
     }
   };
 
-  const handleRemoveSize = (sizeToRemove: number) => {
+  const handleRemoveSize = (sizeToRemove: string) => {
     const updatedSizes = form.sizeOptions.filter(
       (size) => size !== sizeToRemove,
     );
@@ -1107,14 +1099,13 @@ export default function AddProduct({
 
                         <div className="flex gap-2">
                           <input
-                            type="number"
+                            type="text"
                             value={tempSize}
                             onChange={(e) => setTempSize(e.target.value)}
-                            placeholder="Add a size (e.g., 8)"
+                            placeholder="Add a size (e.g., S)"
                             className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all ${
                               errors.size ? "border-red-500" : "border-gray-300"
                             }`}
-                            min={1}
                             onKeyPress={(e) =>
                               e.key === "Enter" &&
                               (e.preventDefault(), handleAddSize())
@@ -1164,7 +1155,7 @@ export default function AddProduct({
                                     sizeOptions: [
                                       ...prev.sizeOptions,
                                       size,
-                                    ].sort((a, b) => a - b),
+                                    ],
                                   }));
                                 }
                               }}
