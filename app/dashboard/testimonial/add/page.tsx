@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { postData } from "@/utils/api";
+import { toast } from "react-hot-toast";
 import { FiUser, FiStar, FiCalendar, FiMessageSquare, FiZap, FiArrowLeft, FiSend, FiCheckCircle } from "react-icons/fi";
 import { motion } from "framer-motion";
 
@@ -63,11 +64,13 @@ const AddTestimonial = () => {
     // Basic validation
     if (!formData.name.trim()) {
       setError("Please enter your name");
+      toast.error("Please enter your name");
       setLoading(false);
       return;
     }
     if (!formData.comment.trim()) {
       setError("Please enter your testimonial");
+      toast.error("Please enter your testimonial");
       setLoading(false);
       return;
     }
@@ -85,6 +88,7 @@ const AddTestimonial = () => {
       const response = await postData("/testimonials", testimonialData);
       
       console.log("Response:", response);
+      toast.success("🎉 Testimonial submitted successfully!");
       setSuccess(true);
       
       // Reset form
@@ -104,11 +108,11 @@ const AddTestimonial = () => {
       
     } catch (err: any) {
       console.error("Error adding testimonial:", err);
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Failed to add testimonial. Please try again."
-      );
+      const errMsg = err.response?.data?.message ||
+        err.message ||
+        "Failed to add testimonial. Please try again.";
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }

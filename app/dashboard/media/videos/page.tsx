@@ -3,6 +3,7 @@
 // components/dashboard/Videos.tsx
 import { mediaAPI, MediaFile } from "@/utils/media.api";
 import React, { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 
 
 const Videos = () => {
@@ -33,13 +34,13 @@ const Videos = () => {
 
     // Check if file is video
     if (!file.type.startsWith("video/")) {
-      alert("Please select a video file");
+      toast.error("Please select a video file");
       return;
     }
 
     // Check file size (max 200MB)
     if (file.size > 200 * 1024 * 1024) {
-      alert("File size should be less than 200MB");
+      toast.error("File size should be less than 200MB");
       return;
     }
 
@@ -47,12 +48,12 @@ const Videos = () => {
     try {
       const response = await mediaAPI.uploadFile(file);
       if (response.success) {
-        alert("Video uploaded successfully!");
+        toast.success("Video uploaded successfully!");
         fetchVideos(); // Refresh the list
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Failed to upload video");
+      toast.error("Failed to upload video");
     } finally {
       setUploading(false);
       event.target.value = ""; // Reset input
@@ -66,19 +67,19 @@ const Videos = () => {
     try {
       const response = await mediaAPI.deleteMedia(filename);
       if (response.success) {
-        alert("Video deleted successfully!");
+        toast.success("Video deleted successfully!");
         fetchVideos(); // Refresh the list
       }
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Failed to delete video");
+      toast.error("Failed to delete video");
     }
   };
 
   // Copy URL to clipboard
   const copyToClipboard = (url: string) => {
     navigator.clipboard.writeText(url);
-    alert("URL copied to clipboard!");
+    toast.success("URL copied to clipboard!");
   };
 
   useEffect(() => {

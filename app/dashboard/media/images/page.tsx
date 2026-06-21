@@ -2,6 +2,7 @@
 // components/dashboard/Images.tsx
 import { mediaAPI, MediaFile } from "@/utils/media.api";
 import React, { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 
 
 const Images = () => {
@@ -33,13 +34,13 @@ const Images = () => {
 
     // Check if file is an image
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file");
+      toast.error("Please select an image file");
       return;
     }
 
     // Check file size (max 50MB for images)
     if (file.size > 50 * 1024 * 1024) {
-      alert("File size should be less than 50MB");
+      toast.error("File size should be less than 50MB");
       return;
     }
 
@@ -47,12 +48,12 @@ const Images = () => {
     try {
       const response = await mediaAPI.uploadFile(file);
       if (response.success) {
-        alert("Image uploaded successfully!");
+        toast.success("Image uploaded successfully!");
         fetchImages(); // Refresh the list
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Failed to upload image");
+      toast.error("Failed to upload image");
     } finally {
       setUploading(false);
       event.target.value = ""; // Reset input
@@ -66,19 +67,19 @@ const Images = () => {
     try {
       const response = await mediaAPI.deleteMedia(filename);
       if (response.success) {
-        alert("Image deleted successfully!");
+        toast.success("Image deleted successfully!");
         fetchImages(); // Refresh the list
       }
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Failed to delete image");
+      toast.error("Failed to delete image");
     }
   };
 
   // Copy URL to clipboard
   const copyToClipboard = (url: string) => {
     navigator.clipboard.writeText(url);
-    alert("URL copied to clipboard!");
+    toast.success("URL copied to clipboard!");
   };
 
   // View image in modal

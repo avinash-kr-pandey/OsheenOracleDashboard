@@ -54,7 +54,15 @@ api.interceptors.request.use(
       // ✅ For multipart/form-data (file uploads), remove Content-Type header
       // Let browser set it automatically with boundary
       if (config.data instanceof FormData) {
-        delete config.headers["Content-Type"];
+        if (config.headers) {
+          if (typeof config.headers.delete === "function") {
+            config.headers.delete("Content-Type");
+            config.headers.delete("content-type");
+          } else {
+            delete config.headers["Content-Type"];
+            delete config.headers["content-type"];
+          }
+        }
       }
     }
     return config;
@@ -131,11 +139,7 @@ export const postFormData = async <T = unknown>(
   formData: FormData,
 ): Promise<T> => {
   try {
-    const response: AxiosResponse<T> = await api.post(endpoint, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response: AxiosResponse<T> = await api.post(endpoint, formData);
     return response.data;
   } catch (error) {
     const err = error as AxiosError;

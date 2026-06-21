@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { fetchData, putData, deleteData } from "@/utils/api";
+import { toast } from "react-hot-toast";
 import {
   FiStar,
   FiCalendar,
@@ -128,11 +129,12 @@ const ViewTestimonials = () => {
   const handleDelete = async (id: number) => {
     try {
       await deleteData(`/testimonials/${id}`);
+      toast.success("🗑️ Testimonial deleted successfully!");
       await fetchTestimonials();
       setShowDeleteConfirm(null);
     } catch (err: any) {
       console.error("Delete error:", err);
-      alert(err.response?.data?.message || "Failed to delete testimonial");
+      toast.error(err.response?.data?.message || "Failed to delete testimonial");
     }
   };
 
@@ -142,11 +144,12 @@ const ViewTestimonials = () => {
 
     try {
       await putData(`/testimonials/${editingId}`, editFormData);
+      toast.success("✨ Testimonial updated successfully!");
       setEditingId(null);
       await fetchTestimonials();
     } catch (err: any) {
       console.error("Update error:", err);
-      alert(err.response?.data?.message || "Failed to update testimonial");
+      toast.error(err.response?.data?.message || "Failed to update testimonial");
     }
   };
 

@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Toaster } from "react-hot-toast";
 
 export default function DashboardLayout({
   children,
@@ -34,6 +35,7 @@ export default function DashboardLayout({
 
 return (
   <div className="min-h-screen bg-gray-100 relative">
+    <Toaster position="top-right" reverseOrder={false} />
     {/* Sidebar */}
     <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 

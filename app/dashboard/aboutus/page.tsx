@@ -2,6 +2,7 @@
 
 import { aboutAPI, AboutDataType } from "@/utils/about.api";
 import React, { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 
 const AboutPage = () => {
   const [aboutData, setAboutData] = useState<AboutDataType | null>(null);
@@ -15,10 +16,7 @@ const AboutPage = () => {
     stats: [] as { label: string; value: string }[],
     sections: [] as { title: string; content: string; image?: string }[],
   });
-  const [message, setMessage] = useState<{
-    type: "success" | "error" | "info";
-    text: string;
-  } | null>(null);
+
   const [previewImages, setPreviewImages] = useState<{ [key: number]: string }>(
     {},
   );
@@ -45,18 +43,11 @@ const AboutPage = () => {
       }
 
       if (showMessage) {
-        setMessage({
-          type: "success",
-          text: "✅ Data refreshed successfully!",
-        });
-        setTimeout(() => setMessage(null), 3000);
+        toast.success("Data refreshed successfully!");
       }
     } catch (error) {
       console.error("❌ Fetch error:", error);
-      setMessage({
-        type: "error",
-        text: "❌ Failed to fetch about data",
-      });
+      toast.error("Failed to fetch about data");
     } finally {
       setLoading(false);
     }
@@ -94,11 +85,7 @@ const AboutPage = () => {
 
   const removeStat = (index: number) => {
     if (formData.stats.length <= 1) {
-      setMessage({
-        type: "info",
-        text: "ℹ️ At least one stat is required",
-      });
-      setTimeout(() => setMessage(null), 3000);
+      toast.error("At least one stat is required");
       return;
     }
     setFormData((prev) => ({
@@ -156,14 +143,10 @@ const AboutPage = () => {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
 
     // Validation
     if (!formData.heroTitle.trim()) {
-      setMessage({
-        type: "error",
-        text: "❌ Hero title is required",
-      });
+      toast.error("Hero title is required");
       setLoading(false);
       return;
     }
@@ -173,21 +156,13 @@ const AboutPage = () => {
       const response = await aboutAPI.updateAbout(formData);
 
       if (response) {
-        setMessage({
-          type: "success",
-          text: "✅ About page updated successfully!",
-        });
+        toast.success("About page updated successfully!");
         setAboutData(response);
         setIsEditing(false);
         setPreviewImages({}); // Clear previews
-
-        setTimeout(() => setMessage(null), 3000);
       }
     } catch (error: any) {
-      setMessage({
-        type: "error",
-        text: error.response?.data?.message || "❌ Failed to update about page",
-      });
+      toast.error(error.response?.data?.message || "Failed to update about page");
       console.error("Update error:", error);
     } finally {
       setLoading(false);
@@ -336,50 +311,7 @@ const AboutPage = () => {
           </div>
         </div>
 
-        {/* Message/Alerts */}
-        {message && (
-          <div
-            className={`mb-6 p-4 rounded-lg flex items-center gap-2 ${
-              message.type === "success"
-                ? "bg-green-50 text-green-800 border border-green-200"
-                : message.type === "error"
-                  ? "bg-red-50 text-red-800 border border-red-200"
-                  : "bg-blue-50 text-blue-800 border border-blue-200"
-            }`}
-          >
-            {message.type === "success" && (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            )}
-            {message.type === "error" && (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
+
 
         {/* View Mode */}
         {!isEditing && aboutData && (
