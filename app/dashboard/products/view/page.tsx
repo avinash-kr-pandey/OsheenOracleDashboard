@@ -490,7 +490,11 @@ export default function ViewProduct() {
                           <p className="text-sm text-gray-600 mt-1 line-clamp-1">
                             {product.description || "No description"}
                           </p>
-                          {/* Category display removed */}
+                          {product.category && (
+                            <span className="text-xs text-gray-500 mt-2 inline-block">
+                              Category: {product.category}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
