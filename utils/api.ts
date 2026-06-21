@@ -359,5 +359,27 @@ export interface AnnouncementsListResponse {
   data: Announcement[];
 }
 
+// Get full URL for relative image paths uploaded to the backend
+export const getFullImageUrl = (imagePath?: string): string => {
+  if (!imagePath) return "";
+  
+  if (
+    imagePath.startsWith("http://") ||
+    imagePath.startsWith("https://") ||
+    imagePath.startsWith("data:")
+  ) {
+    return imagePath;
+  }
+  
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    (process.env.NODE_ENV === "production"
+      ? "https://api.osheenoracle.com/api"
+      : "http://localhost:5000/api");
+      
+  const baseUrl = apiBaseUrl.replace(/\/api\/?$/, "");
+  const formattedPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  return `${baseUrl}${formattedPath}`;
+};
 
 export default api;

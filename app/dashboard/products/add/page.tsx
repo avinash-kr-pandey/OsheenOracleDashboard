@@ -21,6 +21,7 @@ import {
 import Image from "next/image";
 import productAPI from "@/utils/productApi";
 import productCategoryApi, { ProductCategory } from "@/utils/productCategoryApi";
+import { getFullImageUrl } from "@/utils/api";
 
 /* ======================
    TYPES
@@ -266,25 +267,28 @@ export default function AddProduct({
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size should be less than 5MB");
+    // Validate file size (max 15MB)
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Image size should be less than 15MB");
       return;
     }
 
     setUploadingImage(true);
 
     try {
-      // Show local preview immediately
-      const localPreview = URL.createObjectURL(file);
-      setImagePreview(localPreview);
+      // Show local preview immediately using FileReader for robust rendering (no blob: or cors issues)
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
 
       // Upload to server
       const uploadedUrl = await productAPI.uploadProductImage(file);
 
       if (uploadedUrl) {
         setForm((prev) => ({ ...prev, image: uploadedUrl }));
-        setImagePreview(uploadedUrl);
+        // Note: Keep the local base64 preview showing so it doesn't flicker or fail to load
         toast.success("Image uploaded successfully!");
 
         // Clear image error if any
@@ -684,7 +688,7 @@ export default function AddProduct({
                         </div>
                       )}
                       <img
-                        src={imagePreview}
+                        src={getFullImageUrl(imagePreview) || DEFAULT_IMAGE}
                         alt="Preview"
                         className="w-full h-full object-cover"
                         onError={() => {
@@ -726,7 +730,7 @@ export default function AddProduct({
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
                         <p className="text-xs text-gray-500">
-                          Supported formats: JPG, PNG, WebP. Max size: 5MB
+                          Supported formats: JPG, PNG, WebP. Max size: 15MB
                         </p>
                       </div>
                     )}

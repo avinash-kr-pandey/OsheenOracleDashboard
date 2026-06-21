@@ -245,8 +245,8 @@ const AdminBlogs: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        showNotification("Image size should be less than 5MB", "error");
+      if (file.size > 15 * 1024 * 1024) {
+        showNotification("Image size should be less than 15MB", "error");
         return;
       }
       if (!file.type.startsWith("image/")) {
