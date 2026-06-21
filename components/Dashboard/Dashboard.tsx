@@ -14,6 +14,9 @@ import {
   ChevronRight,
   IndianRupee
 } from 'lucide-react';
+import { fetchData } from '@/utils/api';
+import { useRouter } from 'next/navigation';
+import { toast, Toaster } from 'react-hot-toast';
 
 // Dashboard data structure with INR values
 export interface DashboardData {
@@ -103,13 +106,42 @@ export const dashboardData: DashboardData = {
 };
 
 const Dashboard = () => {
+  const router = useRouter();
   const [data, setData] = useState<DashboardData>(dashboardData);
+  const [loading, setLoading] = useState(true);
   const [animatedValues, setAnimatedValues] = useState({
     revenue: 0,
     orders: 0,
     users: 0,
     satisfaction: 0,
   });
+
+  // Fetch real statistics from backend
+  useEffect(() => {
+    const getStats = async () => {
+      try {
+        setLoading(true);
+        const response = await fetchData<{ success: boolean; data: DashboardData }>('/admin/dashboard-stats');
+        if (response && response.success && response.data) {
+          setData(response.data);
+        }
+      } catch (error: any) {
+        console.error("Error fetching dashboard statistics:", error);
+        if (error.response?.status === 401) {
+          toast.error("Please login to view dashboard");
+          router.push("/login");
+        } else if (error.response?.status === 403) {
+          toast.error("Access denied. Admin privileges required.");
+          router.push("/login");
+        } else {
+          toast.error("Failed to connect to backend server. Showing offline data.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    getStats();
+  }, [router]);
 
   // Animation for counter values
   useEffect(() => {
@@ -212,10 +244,22 @@ const Dashboard = () => {
   };
 
   // Calculate max sales for chart scaling
-  const maxSales = Math.max(...data.salesOverTime.map(item => item.sales));
+  const maxSales = data.salesOverTime && data.salesOverTime.length > 0
+    ? Math.max(...data.salesOverTime.map(item => item.sales))
+    : 100000;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex flex-col justify-center items-center gap-4">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-600"></div>
+        <p className="text-purple-900 font-medium animate-pulse">Connecting to Cosmic energy...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 md:p-6">
+      <Toaster position="top-right" />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

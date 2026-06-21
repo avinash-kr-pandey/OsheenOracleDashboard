@@ -16,7 +16,6 @@ export interface Product {
   price: number;
   image: string;
   category: string;
-  brand: string;
   colors?: string[];
 
   // ✅ Optional fields
@@ -75,7 +74,6 @@ export function normalizeProduct(product: any): Product {
     price: Number(product.price) || 0,
     image: product.image || product.images?.[0] || "/placeholder.jpg",
     category: product.category || "Uncategorized",
-    brand: product.brand || "Generic",
 
     // Optional fields
     id: product.id || product._id,
