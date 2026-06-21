@@ -683,7 +683,7 @@ export default function AddProduct({
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                         </div>
                       )}
-                      <Image
+                      <img
                         src={imagePreview}
                         alt="Preview"
                         className="w-full h-full object-cover"
@@ -692,8 +692,6 @@ export default function AddProduct({
                             setImagePreview(DEFAULT_IMAGE);
                           }
                         }}
-                        width={300}
-                        height={300}
                       />
                     </div>
 

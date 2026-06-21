@@ -542,7 +542,7 @@ const AdminBlogs: React.FC = () => {
                     <div className="mt-2">
                       <p className="text-sm text-gray-500 mb-2">Preview:</p>
                       <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200">
-                        <Image
+                        <img
                           src={
                             imagePreview ||
                             (typeof formData.image === "string"
@@ -550,8 +550,7 @@ const AdminBlogs: React.FC = () => {
                               : "")
                           }
                           alt="Preview"
-                          fill
-                          className="object-cover"
+                          className="w-full h-full object-cover"
                         />
                       </div>
                     </div>
