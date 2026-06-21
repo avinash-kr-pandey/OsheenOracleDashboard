@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import productAPI from "@/utils/productApi";
-import productCategoryApi, { ProductCategory } from "@/utils/productCategoryApi";
 import { getFullImageUrl } from "@/utils/api";
 
 /* ======================
@@ -125,7 +124,7 @@ export default function AddProduct({
     originalPrice: editProduct?.originalPrice || 0,
     image: editProduct?.image || "",
     description: editProduct?.description || "",
-    category: editProduct?.category || "",
+    category: editProduct?.category || "Uncategorized",
     inStock: editProduct?.inStock !== undefined ? editProduct.inStock : true,
     hasColorOptions: editProduct?.hasColorOptions || false,
     colors: editProduct?.colors || [],
@@ -139,30 +138,30 @@ export default function AddProduct({
   const [tempColor, setTempColor] = useState<string>("");
   const [tempSize, setTempSize] = useState<string>("");
 
-  // Dynamic product categories state
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [fetchingCategories, setFetchingCategories] = useState<boolean>(false);
-  const [showCategoryModal, setShowCategoryModal] = useState<boolean>(false);
-  const [newCategoryName, setNewCategoryName] = useState<string>("");
-  const [submittingCategory, setSubmittingCategory] = useState<boolean>(false);
 
-  // Load categories from database
-  const loadCategories = async () => {
-    try {
-      setFetchingCategories(true);
-      const data = await productCategoryApi.getProductCategories();
-      setCategories(data);
-    } catch (err) {
-      console.error("Failed to load categories:", err);
-      toast.error("⚠️ Failed to fetch product categories");
-    } finally {
-      setFetchingCategories(false);
-    }
-  };
 
+
+
+  // Sync form and image preview when editProduct changes
   useEffect(() => {
-    loadCategories();
-  }, []);
+    if (editProduct) {
+      setForm({
+        name: editProduct.name || "",
+        price: editProduct.price || 0,
+        originalPrice: editProduct.originalPrice || 0,
+        image: editProduct.image || "",
+        description: editProduct.description || "",
+        category: editProduct.category || "Uncategorized",
+        inStock: editProduct.inStock !== undefined ? editProduct.inStock : true,
+        hasColorOptions: editProduct.hasColorOptions || false,
+        colors: editProduct.colors || [],
+        sizeOptions: editProduct.sizeOptions || [],
+      });
+      setImagePreview(editProduct.image || DEFAULT_IMAGE);
+    } else {
+      resetFormToInitial();
+    }
+  }, [editProduct]);
 
   // Validation function
   const validateForm = () => {
@@ -183,9 +182,7 @@ export default function AddProduct({
         "Original price cannot be less than selling price";
     }
 
-    if (!form.category) {
-      newErrors.category = "Category is required";
-    }
+
 
     if (!form.description.trim()) {
       newErrors.description = "Description is required";
@@ -279,7 +276,13 @@ export default function AddProduct({
       // Show local preview immediately using FileReader for robust rendering (no blob: or cors issues)
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        const base64Data = reader.result as string;
+        setImagePreview(base64Data);
+        try {
+          localStorage.setItem("temp_product_image", base64Data);
+        } catch (err) {
+          console.warn("localStorage quota exceeded, cannot cache local base64 preview");
+        }
       };
       reader.readAsDataURL(file);
 
@@ -288,7 +291,12 @@ export default function AddProduct({
 
       if (uploadedUrl) {
         setForm((prev) => ({ ...prev, image: uploadedUrl }));
-        // Note: Keep the local base64 preview showing so it doesn't flicker or fail to load
+        setImagePreview(uploadedUrl);
+        try {
+          localStorage.setItem("temp_product_image", uploadedUrl);
+        } catch (err) {
+          console.warn("localStorage save failed");
+        }
         toast.success("Image uploaded successfully!");
 
         // Clear image error if any
@@ -410,7 +418,7 @@ export default function AddProduct({
       originalPrice: 0,
       image: "",
       description: "",
-      category: "",
+      category: "Uncategorized",
       inStock: true,
       hasColorOptions: false,
       colors: [],
@@ -449,7 +457,7 @@ export default function AddProduct({
           : Number(form.price.toFixed(2)),
       image: form.image.trim(),
       description: form.description.trim(),
-      category: form.category,
+      category: form.category || "Uncategorized",
       inStock: form.inStock,
       hasColorOptions: form.hasColorOptions,
       colors: form.hasColorOptions ? form.colors.map((c) => c.trim()) : [],
@@ -521,7 +529,7 @@ export default function AddProduct({
         originalPrice: editProduct.originalPrice || 0,
         image: editProduct.image || "",
         description: editProduct.description || "",
-        category: editProduct.category || "",
+        category: editProduct.category || "Uncategorized",
         inStock: editProduct.inStock !== undefined ? editProduct.inStock : true,
         hasColorOptions: editProduct.hasColorOptions || false,
         colors: editProduct.colors || [],
@@ -539,82 +547,7 @@ export default function AddProduct({
     }
   };
 
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return;
 
-    try {
-      setSubmittingCategory(true);
-      const name = newCategoryName.trim();
-      const created = await productCategoryApi.createProductCategory(name);
-
-      if (created) {
-        toast.success(`🎉 Category "${created.name}" added successfully!`);
-        setNewCategoryName("");
-
-        // Reload list
-        await loadCategories();
-
-        // Auto select in form
-        setForm((prev) => ({
-          ...prev,
-          category: created.name,
-        }));
-
-        // Clear category validation error if any
-        if (errors.category) {
-          setErrors((prev) => {
-            const nextErrors = { ...prev };
-            delete nextErrors.category;
-            return nextErrors;
-          });
-        }
-      } else {
-        toast.error("❌ Failed to add category");
-      }
-    } catch (error: unknown) {
-      console.error("Error creating category:", error);
-      let errMsg = "Failed to create category";
-      if (error instanceof Error) {
-        errMsg = error.message;
-      }
-      toast.error(errMsg);
-    } finally {
-      setSubmittingCategory(false);
-    }
-  };
-
-  const handleDeleteCategory = async (id: string, name: string) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete category "${name}"?\nProducts under this category will NOT be deleted, but the category option will be removed.`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const success = await productCategoryApi.deleteProductCategory(id);
-      if (success) {
-        toast.success(`🗑️ Category "${name}" deleted successfully`);
-
-        // Reload list
-        await loadCategories();
-
-        // If current product selection was this category, clear it
-        if (form.category === name) {
-          setForm((prev) => ({
-            ...prev,
-            category: "",
-          }));
-        }
-      } else {
-        toast.error("❌ Failed to delete category");
-      }
-    } catch (error) {
-      console.error("Error deleting category:", error);
-      toast.error("Failed to delete category");
-    }
-  };
 
   return (
     <div className="max-w-6xl mx-auto my-8">
@@ -691,9 +624,20 @@ export default function AddProduct({
                         src={getFullImageUrl(imagePreview) || DEFAULT_IMAGE}
                         alt="Preview"
                         className="w-full h-full object-cover"
-                        onError={() => {
-                          if (imagePreview !== DEFAULT_IMAGE) {
-                            setImagePreview(DEFAULT_IMAGE);
+                        onError={(e) => {
+                          // Try loading from localStorage if the main source fails
+                          try {
+                            const cached = localStorage.getItem("temp_product_image");
+                            if (cached && cached.startsWith("data:") && e.currentTarget.src !== cached) {
+                              e.currentTarget.src = cached;
+                              return;
+                            }
+                          } catch (err) {
+                            console.error("Failed to read from localStorage", err);
+                          }
+                          // Fallback to default image without resetting state
+                          if (e.currentTarget.src !== DEFAULT_IMAGE) {
+                            e.currentTarget.src = DEFAULT_IMAGE;
                           }
                         }}
                       />
@@ -784,56 +728,7 @@ export default function AddProduct({
                         )}
                       </div>
 
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Category <span className="text-red-500">*</span>
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => setShowCategoryModal(true)}
-                              className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-all flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 hover:bg-blue-100"
-                            >
-                              <Plus className="h-3 w-3" /> Manage Categories
-                            </button>
-                          </div>
-                          <div className="relative">
-                            <Folder className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
-                            <select
-                              name="category"
-                              value={form.category}
-                              onChange={handleChange}
-                              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white ${
-                                errors.category
-                                  ? "border-red-500"
-                                  : "border-gray-300"
-                              }`}
-                              required
-                            >
-                              <option value="">Select a category</option>
-                              {categories.length > 0 ? (
-                                categories.map((cat) => (
-                                  <option key={cat._id} value={cat.name}>
-                                    {cat.name}
-                                  </option>
-                                ))
-                              ) : (
-                                FALLBACK_CATEGORIES.map((cat) => (
-                                  <option key={cat} value={cat}>
-                                    {cat}
-                                  </option>
-                                ))
-                              )}
-                            </select>
-                          </div>
-                          {errors.category && (
-                            <p className="mt-2 text-sm text-red-600">
-                              {errors.category}
-                            </p>
-                          )}
-                        </div>
-
+                      <div className="grid md:grid-cols-1 gap-6">
                         <div className="flex items-center justify-between">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1270,122 +1165,7 @@ export default function AddProduct({
         </div>
       </div>
 
-      {/* Premium Category Management Modal */}
-      {showCategoryModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300 animate-fadeIn">
-          <div className="bg-white/95 border border-gray-100 shadow-2xl rounded-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-100 max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-150 px-6 py-4 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-white rounded-lg shadow-sm">
-                  <Folder className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-800 text-lg">Manage Categories</h3>
-                  <p className="text-xs text-gray-500">Add or remove product categories</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCategoryModal(false);
-                  setNewCategoryName("");
-                }}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            {/* Body */}
-            <div className="p-6 flex-1 overflow-y-auto space-y-6">
-              {/* Add New Category form */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  New Category Name
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder="e.g., Summer Collection"
-                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm outline-none transition-all"
-                    disabled={submittingCategory}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddCategory();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCategory}
-                    disabled={submittingCategory || !newCategoryName.trim()}
-                    className="bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shadow-md shadow-blue-200"
-                  >
-                    {submittingCategory ? (
-                      <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    ) : (
-                      <Plus className="h-4 w-4" />
-                    )}
-                    Add
-                  </button>
-                </div>
-              </div>
-
-              {/* Categories list */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-gray-700">Existing Categories</h4>
-                {fetchingCategories ? (
-                  <div className="flex flex-col items-center justify-center py-8 gap-2">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                    <span className="text-xs text-gray-500">Loading categories...</span>
-                  </div>
-                ) : categories.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400 text-sm border border-dashed border-gray-200 rounded-xl">
-                    No categories found. Click Add to create one.
-                  </div>
-                ) : (
-                  <div className="grid gap-2 max-h-[30vh] overflow-y-auto pr-1">
-                    {categories.map((cat) => (
-                      <div
-                        key={cat._id}
-                        className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all duration-200"
-                      >
-                        <span className="text-sm font-medium text-gray-700">{cat.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCategory(cat._id, cat.name)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
-                          title="Delete category"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-gray-150 px-6 py-4 bg-gray-50 flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCategoryModal(false);
-                  setNewCategoryName("");
-                }}
-                className="bg-white border border-gray-300 text-gray-700 px-5 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

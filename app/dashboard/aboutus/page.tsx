@@ -905,7 +905,7 @@ const AboutPage = () => {
                                   Choose File
                                 </label>
                                 <span className="text-sm text-gray-500">
-                                  PNG, JPG, GIF (Max 5MB)
+                                  PNG, JPG, GIF (Max 15MB)
                                 </span>
                               </div>
                               <p className="text-xs text-gray-400 mt-1">

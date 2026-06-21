@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import productAPI, { Product } from "@/utils/productApi";
 import AddProduct from "../add/page";
+import { getFullImageUrl } from "@/utils/api";
 
 /* ======================
    COMPONENT
@@ -378,15 +379,10 @@ export default function ViewProduct() {
               className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="relative h-48 bg-gray-100">
-                <Image
-                  src={
-                    product.image ||
-                    "https://via.placeholder.com/400x300?text=Product"
-                  }
+                <img
+                  src={getFullImageUrl(product.image) || "https://via.placeholder.com/400x300?text=Product"}
                   alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className="w-full h-full object-cover absolute inset-0"
                 />
                 <div className="absolute top-3 right-3">
                   <span
@@ -481,15 +477,10 @@ export default function ViewProduct() {
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-4">
                         <div className="w-16 h-16 relative rounded-lg overflow-hidden bg-gray-100">
-                          <Image
-                            src={
-                              product.image ||
-                              "https://via.placeholder.com/150?text=Product"
-                            }
+                          <img
+                            src={getFullImageUrl(product.image) || "https://via.placeholder.com/150?text=Product"}
                             alt={product.name}
-                            fill
-                            className="object-cover"
-                            sizes="64px"
+                            className="w-full h-full object-cover absolute inset-0"
                           />
                         </div>
                         <div>
@@ -499,11 +490,7 @@ export default function ViewProduct() {
                           <p className="text-sm text-gray-600 mt-1 line-clamp-1">
                             {product.description || "No description"}
                           </p>
-                          {product.category && (
-                            <span className="text-xs text-gray-500 mt-2 inline-block">
-                              Category: {product.category}
-                            </span>
-                          )}
+                          {/* Category display removed */}
                         </div>
                       </div>
                     </td>
