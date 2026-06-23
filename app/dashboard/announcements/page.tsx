@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { fetchData, postData } from "@/utils/api";
 import type { Announcement, AnnouncementResponse, AnnouncementsListResponse } from "@/utils/api";
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 import {
   Megaphone,
   Save,
@@ -97,6 +97,7 @@ export default function AnnouncementsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-4 md:p-8">
+      <Toaster position="top-right" />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>

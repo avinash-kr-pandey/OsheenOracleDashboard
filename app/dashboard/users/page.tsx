@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import userAPI, { User } from "@/utils/userApi";
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 import {
   Users,
   Search,
@@ -194,6 +194,7 @@ export default function UsersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-4 md:p-8">
+      <Toaster position="top-right" />
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { postData } from "@/utils/api";
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 import { FiUser, FiStar, FiCalendar, FiMessageSquare, FiZap, FiArrowLeft, FiSend, FiCheckCircle } from "react-icons/fi";
 import { motion } from "framer-motion";
 
@@ -175,6 +175,7 @@ const AddTestimonial = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <Toaster position="top-right" />
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]" />
 

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 import {
   Search,
   Filter,
@@ -136,6 +136,7 @@ export default function ViewProduct() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      <Toaster position="top-right" />
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">

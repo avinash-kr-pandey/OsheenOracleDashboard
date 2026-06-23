@@ -2,7 +2,7 @@
 
 import { aboutAPI, AboutDataType } from "@/utils/about.api";
 import React, { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 
 const AboutPage = () => {
   const [aboutData, setAboutData] = useState<AboutDataType | null>(null);
@@ -254,6 +254,7 @@ const AboutPage = () => {
   // Main Render - API Data
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      <Toaster position="top-right" />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header with Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">

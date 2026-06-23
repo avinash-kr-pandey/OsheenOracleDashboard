@@ -3,7 +3,7 @@
 // components/dashboard/Videos.tsx
 import { mediaAPI, MediaFile } from "@/utils/media.api";
 import React, { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 
 
 const Videos = () => {
@@ -96,6 +96,7 @@ const Videos = () => {
 
   return (
     <div className="p-6">
+      <Toaster position="top-right" />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Videos Gallery</h1>
         <label className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded cursor-pointer">
