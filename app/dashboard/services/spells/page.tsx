@@ -249,10 +249,10 @@ const AdminSpells: React.FC = () => {
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <h1 className="text-3xl font-bold text-gray-900">
-            Spell Types Management
+            Energy Healing Modalities Management
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Add and manage different types of spells and their descriptions
+            Add and manage different types of energy healing modalities and their descriptions
           </p>
         </div>
       </div>
@@ -283,7 +283,7 @@ const AdminSpells: React.FC = () => {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Add New Spell Type
+                Add New Energy Healing Modality
               </span>
             </button>
             <button
@@ -314,7 +314,7 @@ const AdminSpells: React.FC = () => {
                     d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                   />
                 </svg>
-                View All Spell Types ({spellTypes.length})
+                View All Energy Healing Modalities ({spellTypes.length})
               </span>
             </button>
           </nav>
@@ -327,14 +327,14 @@ const AdminSpells: React.FC = () => {
         {activeTab === "add" && (
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">
-              Add New Spell Type
+              Add New Energy Healing Modality
             </h2>
 
             <form onSubmit={handleAddSpell} className="space-y-6">
               {/* Spell Type Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Spell Type Name <span className="text-red-500">*</span>
+                  Energy Healing Modality Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -345,7 +345,7 @@ const AdminSpells: React.FC = () => {
                   className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     formErrors.type ? "border-red-500" : "border-gray-300"
                   }`}
-                  placeholder="e.g., Love Spell, Protection Spell, Healing Spell"
+                  placeholder="e.g., Love Energy Healing, Protection Energy Healing, Emotional & Inner Healing"
                 />
                 {formErrors.type && (
                   <p className="mt-1 text-sm text-red-500">{formErrors.type}</p>
@@ -477,7 +477,7 @@ const AdminSpells: React.FC = () => {
                           d="M12 4v16m8-8H4"
                         />
                       </svg>
-                      Add Spell Type
+                      Add Energy Healing Modality
                     </>
                   )}
                 </button>
@@ -494,7 +494,7 @@ const AdminSpells: React.FC = () => {
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Search Spell Types
+                    Search Energy Healing Modalities
                   </label>
                   <input
                     type="text"
@@ -557,12 +557,12 @@ const AdminSpells: React.FC = () => {
                       />
                     </svg>
                     <h3 className="mt-2 text-sm font-medium text-gray-900">
-                      No spell types found
+                      No energy healing modalities found
                     </h3>
                     <p className="mt-1 text-sm text-gray-500">
                       {searchTerm
                         ? "Try clearing the search"
-                        : "Get started by adding a new spell type."}
+                        : "Get started by adding a new energy healing modality."}
                     </p>
                     {!searchTerm && (
                       <div className="mt-6">
@@ -583,7 +583,7 @@ const AdminSpells: React.FC = () => {
                               d="M12 4v16m8-8H4"
                             />
                           </svg>
-                          Add New Spell Type
+                          Add New Energy Healing Modality
                         </button>
                       </div>
                     )}
@@ -696,7 +696,7 @@ const AdminSpells: React.FC = () => {
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900">
-                Spell Type Details
+                Energy Healing Modality Details
               </h3>
               <button
                 onClick={() => setShowViewModal(false)}
@@ -724,7 +724,7 @@ const AdminSpells: React.FC = () => {
                 </span>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">
-                    Spell Type
+                    Energy Healing Modality
                   </label>
                   <p className="mt-1 text-xl text-gray-900">
                     {selectedSpell.type}
@@ -788,7 +788,7 @@ const AdminSpells: React.FC = () => {
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900">
-                Edit Spell Type
+                Edit Energy Healing Modality
               </h3>
               <button
                 onClick={() => setShowEditModal(false)}
@@ -812,7 +812,7 @@ const AdminSpells: React.FC = () => {
             <div className="px-6 py-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Spell Type Name
+                  Energy Healing Modality Name
                 </label>
                 <input
                   type="text"
@@ -889,7 +889,7 @@ const AdminSpells: React.FC = () => {
                 disabled={loading}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? "Updating..." : "Update Spell Type"}
+                {loading ? "Updating..." : "Update Energy Healing Modality"}
               </button>
             </div>
           </div>
@@ -902,7 +902,7 @@ const AdminSpells: React.FC = () => {
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Delete Spell Type
+                Delete Energy Healing Modality
               </h3>
               <p className="text-gray-500">
                 Are you sure you want to delete{" "}

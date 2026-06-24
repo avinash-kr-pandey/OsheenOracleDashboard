@@ -404,7 +404,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: <FiUsers />,
       color: "text-green-300",
       submenu: [
-        { name: "Spells", href: "/dashboard/services/spells" },
+        { name: "Energy Healing", href: "/dashboard/services/spells" },
         { name: "Reading", href: "/dashboard/services/reading" },
         { name: "Services Package", href: "/dashboard/services/package" },
       ],

@@ -2,12 +2,20 @@
 import { fetchData, postData, putData, deleteData, postFormData } from "./api";
 
 // Types
+export interface SizePrice {
+  size: string;
+  price: number;
+  originalPrice: number;
+}
+
 export interface Product {
   _id: string;
   name: string;
   price: number;
   originalPrice: number;
   image: string;
+  images?: string[];
+  video?: string;
   description: string;
   category: string;
   inStock: boolean;
@@ -15,6 +23,8 @@ export interface Product {
   colors: string[];
   sizeOptions: string[];
   discount: string;
+  gender?: string;
+  sizePrices?: SizePrice[];
   averageRating: number;
   reviewCount: number;
   reviews: Review[];
@@ -25,6 +35,7 @@ export interface Product {
 
 export interface Review {
   admin: string;
+  name?: string;
   rating: number;
   comment: string;
   createdAt: string;
@@ -36,6 +47,8 @@ export interface ProductPayload {
   price: number;
   originalPrice: number;
   image: string;
+  images?: string[];
+  video?: string;
   description: string;
   category: string;
   inStock: boolean;
@@ -43,6 +56,8 @@ export interface ProductPayload {
   colors: string[];
   sizeOptions: string[];
   discount?: string;
+  gender?: string;
+  sizePrices?: SizePrice[];
 }
 
 export interface UploadResponse {
@@ -206,6 +221,19 @@ export const deleteProduct = async (id: string): Promise<boolean> => {
   }
 };
 
+export const addProductReview = async (
+  productId: string,
+  reviewData: { name: string; rating: number; comment: string }
+): Promise<any> => {
+  try {
+    const response = await postData<any>(`/products/${productId}/reviews`, reviewData);
+    return response;
+  } catch (error) {
+    console.error("Error adding review:", error);
+    throw error;
+  }
+};
+
 const productAPI = {
   getProducts,
   getProductById,
@@ -213,6 +241,7 @@ const productAPI = {
   updateProduct,
   deleteProduct,
   uploadProductImage,
+  addProductReview,
 };
 
 export default productAPI;

@@ -19,46 +19,9 @@ import {
   Trash2,
 } from "lucide-react";
 import Image from "next/image";
-import productAPI from "@/utils/productApi";
+import productAPI, { Product, ProductPayload, SizePrice, Review } from "@/utils/productApi";
 import productCategoryApi, { ProductCategory } from "@/utils/productCategoryApi";
 import { getFullImageUrl } from "@/utils/api";
-
-/* ======================
-   TYPES
-====================== */
-
-interface ProductPayload {
-  name: string;
-  price: number;
-  originalPrice: number;
-  image: string;
-  description: string;
-  category: string;
-  inStock: boolean;
-  hasColorOptions: boolean;
-  colors: string[];
-  sizeOptions: string[];
-  discount?: string;
-}
-
-interface Review {
-  admin: string;
-  rating: number;
-  comment: string;
-  createdAt: string;
-  _id: string;
-}
-
-interface Product extends ProductPayload {
-  _id: string;
-  discount: string;
-  averageRating: number;
-  reviewCount: number;
-  reviews: Review[];
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
-}
 
 /* ======================
    CONSTANTS
@@ -124,12 +87,16 @@ export default function AddProduct({
     price: editProduct?.price || 0,
     originalPrice: editProduct?.originalPrice || 0,
     image: editProduct?.image || "",
+    images: editProduct?.images || [],
+    video: editProduct?.video || "",
     description: editProduct?.description || "",
     category: editProduct?.category || "",
     inStock: editProduct?.inStock !== undefined ? editProduct.inStock : true,
     hasColorOptions: editProduct?.hasColorOptions || false,
     colors: editProduct?.colors || [],
     sizeOptions: editProduct?.sizeOptions || [],
+    gender: editProduct?.gender || "Unisex",
+    sizePrices: editProduct?.sizePrices || [],
   });
 
   const [imagePreview, setImagePreview] = useState<string>(
@@ -138,6 +105,25 @@ export default function AddProduct({
 
   const [tempColor, setTempColor] = useState<string>("");
   const [tempSize, setTempSize] = useState<string>("");
+  const [sizePriceInput, setSizePriceInput] = useState({
+    size: "",
+    price: 0,
+    originalPrice: 0,
+  });
+
+  const [reviewsList, setReviewsList] = useState<Review[]>(editProduct?.reviews || []);
+  const [newReviewName, setNewReviewName] = useState<string>("");
+  const [newReviewRating, setNewReviewRating] = useState<number>(5);
+  const [newReviewComment, setNewReviewComment] = useState<string>("");
+  const [submittingReview, setSubmittingReview] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (editProduct) {
+      setReviewsList(editProduct.reviews || []);
+    } else {
+      setReviewsList([]);
+    }
+  }, [editProduct]);
 
   // Dynamic product categories state
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -384,6 +370,42 @@ export default function AddProduct({
     }));
   };
 
+  const handleAddSizePrice = () => {
+    const { size, price, originalPrice } = sizePriceInput;
+    if (!size) {
+      toast.error("Please select a size first");
+      return;
+    }
+    if (price <= 0) {
+      toast.error("Price must be greater than 0");
+      return;
+    }
+
+    const exists = (form.sizePrices || []).some((sp) => sp.size === size);
+    if (exists) {
+      toast.error(`Pricing for size ${size} already exists. Remove it first to update.`);
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      sizePrices: [
+        ...(prev.sizePrices || []),
+        { size, price, originalPrice: originalPrice || price },
+      ],
+    }));
+
+    setSizePriceInput({ size: "", price: 0, originalPrice: 0 });
+    toast.success(`Pricing for size ${size} added!`);
+  };
+
+  const handleRemoveSizePrice = (sizeToRemove: string) => {
+    setForm((prev) => ({
+      ...prev,
+      sizePrices: (prev.sizePrices || []).filter((sp) => sp.size !== sizeToRemove),
+    }));
+  };
+
   const getColorHex = (colorName: string) => {
     const color = colorName.toLowerCase();
     const colors: Record<string, string> = {
@@ -409,12 +431,16 @@ export default function AddProduct({
       price: 0,
       originalPrice: 0,
       image: "",
+      images: [],
+      video: "",
       description: "",
       category: "",
       inStock: true,
       hasColorOptions: false,
       colors: [],
       sizeOptions: [],
+      gender: "Unisex",
+      sizePrices: [],
     };
 
     setForm(initialForm);
@@ -448,6 +474,8 @@ export default function AddProduct({
           ? Number(form.originalPrice.toFixed(2))
           : Number(form.price.toFixed(2)),
       image: form.image.trim(),
+      images: form.images || [],
+      video: form.video ? form.video.trim() : "",
       description: form.description.trim(),
       category: form.category,
       inStock: form.inStock,
@@ -455,6 +483,8 @@ export default function AddProduct({
       colors: form.hasColorOptions ? form.colors.map((c) => c.trim()) : [],
       sizeOptions: form.sizeOptions,
       discount: form.originalPrice > form.price ? discount + " off" : "",
+      gender: form.gender || "Unisex",
+      sizePrices: form.sizePrices || [],
     };
 
     try {
@@ -520,12 +550,16 @@ export default function AddProduct({
         price: editProduct.price || 0,
         originalPrice: editProduct.originalPrice || 0,
         image: editProduct.image || "",
+        images: editProduct.images || [],
+        video: editProduct.video || "",
         description: editProduct.description || "",
         category: editProduct.category || "",
         inStock: editProduct.inStock !== undefined ? editProduct.inStock : true,
         hasColorOptions: editProduct.hasColorOptions || false,
         colors: editProduct.colors || [],
         sizeOptions: editProduct.sizeOptions || [],
+        gender: editProduct.gender || "Unisex",
+        sizePrices: editProduct.sizePrices || [],
       });
       setImagePreview(editProduct.image || DEFAULT_IMAGE);
     } else {
@@ -580,6 +614,48 @@ export default function AddProduct({
       toast.error(errMsg);
     } finally {
       setSubmittingCategory(false);
+    }
+  };
+
+  const handleAddReview = async () => {
+    if (!editProduct?._id) return;
+    if (!newReviewComment.trim()) {
+      toast.error("Please enter a review comment");
+      return;
+    }
+    if (newReviewRating < 1 || newReviewRating > 5) {
+      toast.error("Rating must be between 1 and 5");
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      const res = await productAPI.addProductReview(editProduct._id, {
+        name: newReviewName.trim(),
+        rating: newReviewRating,
+        comment: newReviewComment.trim(),
+      });
+      if (res && res.success) {
+        toast.success("Review added successfully!");
+        setNewReviewName("");
+        setNewReviewComment("");
+        setNewReviewRating(5);
+        if (res.data && res.data.reviews) {
+          setReviewsList(res.data.reviews);
+        } else {
+          const updatedProduct = await productAPI.getProductById(editProduct._id);
+          if (updatedProduct) {
+            setReviewsList(updatedProduct.reviews || []);
+          }
+        }
+      } else {
+        toast.error("Failed to add review");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error adding review");
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -743,6 +819,155 @@ export default function AddProduct({
                       </div>
                     </div>
                   </div>
+
+                  {/* Additional Images Section */}
+                  <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 mt-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <ImageIcon className="h-5 w-5 text-gray-600" />
+                      <h3 className="font-semibold text-gray-700">
+                        Additional Images
+                      </h3>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          id="new-image-url"
+                          placeholder="Add image URL..."
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-1 focus:ring-blue-500"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const input = document.getElementById("new-image-url") as HTMLInputElement;
+                              const url = input?.value.trim();
+                              if (url) {
+                                setForm(prev => ({
+                                  ...prev,
+                                  images: [...(prev.images || []), url]
+                                }));
+                                input.value = "";
+                              }
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById("new-image-url") as HTMLInputElement;
+                            const url = input?.value.trim();
+                            if (url) {
+                              setForm(prev => ({
+                                ...prev,
+                                images: [...(prev.images || []), url]
+                              }));
+                              input.value = "";
+                            }
+                          }}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 font-medium"
+                        >
+                          Add
+                        </button>
+                      </div>
+
+                      <div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files || []);
+                            if (files.length === 0) return;
+                            setUploadingImage(true);
+                            try {
+                              const uploadPromises = files.map(file => productAPI.uploadProductImage(file));
+                              const urls = await Promise.all(uploadPromises);
+                              const validUrls = urls.filter((url): url is string => !!url);
+                              if (validUrls.length > 0) {
+                                setForm(prev => ({
+                                  ...prev,
+                                  images: [...(prev.images || []), ...validUrls]
+                                }));
+                                toast.success(`Uploaded ${validUrls.length} additional images!`);
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              toast.error("Failed to upload some images");
+                            } finally {
+                              setUploadingImage(false);
+                            }
+                          }}
+                          className="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                      </div>
+
+                      {form.images && form.images.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          {form.images.map((img, idx) => (
+                            <div key={idx} className="relative aspect-square border border-gray-250 rounded-lg overflow-hidden group">
+                              <img src={getFullImageUrl(img)} alt="Variant" className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setForm(prev => ({
+                                    ...prev,
+                                    images: (prev.images || []).filter((_, i) => i !== idx)
+                                  }));
+                                }}
+                                className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full hover:bg-red-700 opacity-80 hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Video URL/Upload Section */}
+                  <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 mt-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <ImageIcon className="h-5 w-5 text-gray-600" />
+                      <h3 className="font-semibold text-gray-700">
+                        Product Video (Optional)
+                      </h3>
+                    </div>
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        name="video"
+                        value={form.video}
+                        onChange={(e) => setForm(prev => ({ ...prev, video: e.target.value }))}
+                        placeholder="Video URL (e.g. MP4 link)"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800"
+                      />
+                      <div>
+                        <input
+                          type="file"
+                          accept="video/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              const uploadedUrl = await productAPI.uploadProductImage(file);
+                              if (uploadedUrl) {
+                                setForm(prev => ({
+                                  ...prev,
+                                  video: uploadedUrl
+                                }));
+                                toast.success("Product video uploaded!");
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              toast.error("Failed to upload video");
+                            }
+                          }}
+                          className="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -859,115 +1084,24 @@ export default function AddProduct({
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Pricing Section */}
-                  <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <div className="flex items-center gap-2 mb-6">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Tag className="h-5 w-5 text-green-600" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        Pricing Details
-                      </h3>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Selling Price (₹){" "}
-                          <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-3.5 text-gray-400 font-medium">
-                            ₹
-                          </span>
-                          <input
-                            type="number"
-                            name="price"
-                            value={form.price || ""}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Gender Option
+                          </label>
+                          <select
+                            name="gender"
+                            value={form.gender}
                             onChange={handleChange}
-                            placeholder="0.00"
-                            className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-                              errors.price
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                            min={0}
-                            step={0.01}
-                            required
-                          />
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white text-gray-800"
+                          >
+                            <option value="Unisex">Unisex</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                          </select>
                         </div>
-                        {errors.price && (
-                          <p className="mt-2 text-sm text-red-600">
-                            {errors.price}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Original Price (₹)
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-3.5 text-gray-400 font-medium">
-                            ₹
-                          </span>
-                          <input
-                            type="number"
-                            name="originalPrice"
-                            value={form.originalPrice || ""}
-                            onChange={handleChange}
-                            placeholder="0.00"
-                            className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-                              errors.originalPrice
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                            min={0}
-                            step={0.01}
-                          />
-                        </div>
-                        {errors.originalPrice && (
-                          <p className="mt-2 text-sm text-red-600">
-                            {errors.originalPrice}
-                          </p>
-                        )}
                       </div>
                     </div>
-
-                    {form.originalPrice > form.price && (
-                      <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-100 rounded-lg">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div>
-                            <span className="text-gray-700 font-medium">
-                              You&apos;re offering:
-                            </span>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {Math.round(
-                                ((form.originalPrice - form.price) /
-                                  form.originalPrice) *
-                                  100,
-                              )}
-                              % discount
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-2xl font-bold text-green-600">
-                              ₹
-                              {(form.originalPrice - form.price).toLocaleString(
-                                "en-IN",
-                              )}
-                            </span>
-                            <p className="text-sm text-gray-600">
-                              savings per item
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Variants Section */}
@@ -1110,8 +1244,8 @@ export default function AddProduct({
                               errors.size ? "border-red-500" : "border-gray-300"
                             }`}
                             onKeyPress={(e) =>
-                              e.key === "Enter" &&
-                              (e.preventDefault(), handleAddSize())
+                                e.key === "Enter" &&
+                                (e.preventDefault(), handleAddSize())
                             }
                           />
                           <button
@@ -1180,6 +1314,204 @@ export default function AddProduct({
                     </div>
                   </div>
 
+                  {/* Pricing Section */}
+                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Tag className="h-5 w-5 text-green-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        Pricing Details
+                      </h3>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Selling Price (₹){" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-3.5 text-gray-400 font-medium">
+                            ₹
+                          </span>
+                          <input
+                            type="number"
+                            name="price"
+                            value={form.price || ""}
+                            onChange={handleChange}
+                            placeholder="0.00"
+                            className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                              errors.price
+                                ? "border-red-500"
+                                : "border-gray-300"
+                            }`}
+                            min={0}
+                            step={0.01}
+                            required
+                          />
+                        </div>
+                        {errors.price && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors.price}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Original Price (₹)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-3.5 text-gray-400 font-medium">
+                            ₹
+                          </span>
+                          <input
+                            type="number"
+                            name="originalPrice"
+                            value={form.originalPrice || ""}
+                            onChange={handleChange}
+                            placeholder="0.00"
+                            className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                              errors.originalPrice
+                                ? "border-red-500"
+                                : "border-gray-300"
+                            }`}
+                            min={0}
+                            step={0.01}
+                          />
+                        </div>
+                        {errors.originalPrice && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors.originalPrice}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {form.originalPrice > form.price && (
+                      <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-100 rounded-lg">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <span className="text-gray-700 font-medium">
+                              You&apos;re offering:
+                            </span>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {Math.round(
+                                ((form.originalPrice - form.price) /
+                                  form.originalPrice) *
+                                  100,
+                              )}
+                              % discount
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-2xl font-bold text-green-600">
+                              ₹
+                              {(form.originalPrice - form.price).toLocaleString(
+                                "en-IN",
+                              )}
+                            </span>
+                            <p className="text-sm text-gray-600">
+                              savings per item
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Size-wise Pricing Subsection */}
+                    <div className="mt-8 pt-6 border-t border-gray-200">
+                      <h4 className="font-semibold text-gray-800 mb-4">
+                        Size-Wise Pricing Variants (Optional)
+                      </h4>
+
+                      <div className="grid md:grid-cols-4 gap-4 items-end mb-4 bg-gray-50 p-4 rounded-lg border border-gray-150">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-2">
+                            Select Size
+                          </label>
+                          <select
+                            value={sizePriceInput.size}
+                            onChange={(e) => setSizePriceInput(prev => ({ ...prev, size: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-800"
+                          >
+                            <option value="">Select size</option>
+                            {form.sizeOptions.map((s) => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-2">
+                            Selling Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={sizePriceInput.price || ""}
+                            onChange={(e) => setSizePriceInput(prev => ({ ...prev, price: Number(e.target.value) }))}
+                            placeholder="0.00"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-2">
+                            Original Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={sizePriceInput.originalPrice || ""}
+                            onChange={(e) => setSizePriceInput(prev => ({ ...prev, originalPrice: Number(e.target.value) }))}
+                            placeholder="0.00"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800"
+                          />
+                        </div>
+                        <div>
+                          <button
+                            type="button"
+                            onClick={handleAddSizePrice}
+                            className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                          >
+                            Add Variant
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Size Pricing List */}
+                      {form.sizePrices && form.sizePrices.length > 0 && (
+                        <div className="overflow-hidden border border-gray-200 rounded-lg bg-white">
+                          <table className="w-full text-left border-collapse text-sm">
+                            <thead>
+                              <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold">
+                                <th className="p-3">Size</th>
+                                <th className="p-3">Selling Price</th>
+                                <th className="p-3">Original Price</th>
+                                <th className="p-3 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {form.sizePrices.map((sp, idx) => (
+                                <tr key={idx} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50">
+                                  <td className="p-3 font-semibold text-gray-800">{sp.size}</td>
+                                  <td className="p-3 text-gray-800">₹{sp.price}</td>
+                                  <td className="p-3 text-gray-500">₹{sp.originalPrice}</td>
+                                  <td className="p-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveSizePrice(sp.size)}
+                                      className="text-red-600 hover:text-red-800 p-1 transition-colors"
+                                    >
+                                      Remove
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Description Section */}
                   <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <div className="flex items-center gap-2 mb-6">
@@ -1219,6 +1551,104 @@ export default function AddProduct({
                       </div>
                     </div>
                   </div>
+
+                  {/* Reviews Section - Only for Editing */}
+                  {editProduct?._id && (
+                    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-yellow-100 rounded-lg">
+                          <span className="text-yellow-600 font-bold">★</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          Product Reviews
+                        </h3>
+                      </div>
+
+                      {/* Add Review Form */}
+                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-150 space-y-4">
+                        <h4 className="text-sm font-semibold text-gray-700">Add a Mock/Admin Review</h4>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                              Reviewer Name
+                            </label>
+                            <input
+                              type="text"
+                              value={newReviewName}
+                              onChange={(e) => setNewReviewName(e.target.value)}
+                              placeholder="e.g. Jane Doe"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-1 focus:ring-blue-500 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                              Rating (1-5)
+                            </label>
+                            <select
+                              value={newReviewRating}
+                              onChange={(e) => setNewReviewRating(Number(e.target.value))}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 bg-white"
+                            >
+                              <option value={5}>5 Stars</option>
+                              <option value={4}>4 Stars</option>
+                              <option value={3}>3 Stars</option>
+                              <option value={2}>2 Stars</option>
+                              <option value={1}>1 Star</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">
+                            Review Comment
+                          </label>
+                          <textarea
+                            value={newReviewComment}
+                            onChange={(e) => setNewReviewComment(e.target.value)}
+                            placeholder="Write your review here..."
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-1 focus:ring-blue-500 bg-white resize-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          disabled={submittingReview}
+                          onClick={handleAddReview}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+                        >
+                          {submittingReview ? "Adding..." : "Add Review"}
+                        </button>
+                      </div>
+
+                      {/* Reviews List */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-gray-700">Existing Reviews ({reviewsList.length})</h4>
+                        {reviewsList.length === 0 ? (
+                          <p className="text-sm text-gray-500 italic">No reviews yet.</p>
+                        ) : (
+                          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                            {reviewsList.map((review, idx) => (
+                              <div key={review._id || idx} className="p-3 border border-gray-150 rounded-lg space-y-1 bg-white shadow-sm">
+                                <div className="flex justify-between items-center">
+                                  <span className="font-semibold text-sm text-gray-800">
+                                    {review.name || "Anonymous"}
+                                  </span>
+                                  <span className="text-xs text-gray-400">
+                                    {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ""}
+                                  </span>
+                                </div>
+                                <div className="flex text-yellow-500 text-xs">
+                                  {Array.from({ length: 5 }).map((_, i) => (
+                                    <span key={i}>{i < review.rating ? "★" : "☆"}</span>
+                                  ))}
+                                </div>
+                                <p className="text-xs text-gray-650">{review.comment}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
