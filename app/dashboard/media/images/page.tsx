@@ -38,11 +38,6 @@ const Images = () => {
       return;
     }
 
-    // Check file size (max 50MB for images)
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error("File size should be less than 50MB");
-      return;
-    }
 
     setUploading(true);
     try {

@@ -283,10 +283,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      toast.error("File size should be less than 15MB");
-      return;
-    }
 
     setUploading(true);
     try {

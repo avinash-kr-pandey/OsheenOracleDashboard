@@ -235,10 +235,6 @@ const AdminBlogs: React.FC = () => {
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      toast.error("Image size should be less than 15MB");
-      return;
-    }
 
     setUploadingImage(true);
     try {
@@ -276,10 +272,6 @@ const AdminBlogs: React.FC = () => {
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      toast.error("Image size should be less than 15MB");
-      return;
-    }
 
     setEditUploadingImage(true);
     try {
@@ -610,7 +602,7 @@ const AdminBlogs: React.FC = () => {
                           onChange={handleFileUpload}
                           className="w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, WebP up to 15MB.</p>
+                        <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, WebP.</p>
                       </div>
                     )}
                     {formErrors.image && (

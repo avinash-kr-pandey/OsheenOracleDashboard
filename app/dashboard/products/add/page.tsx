@@ -253,11 +253,6 @@ export default function AddProduct({
       return;
     }
 
-    // Validate file size (max 15MB)
-    if (file.size > 15 * 1024 * 1024) {
-      toast.error("Image size should be less than 15MB");
-      return;
-    }
 
     setUploadingImage(true);
 
@@ -807,7 +802,7 @@ export default function AddProduct({
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
                         <p className="text-xs text-gray-500">
-                          Supported formats: JPG, PNG, WebP. Max size: 15MB
+                          Supported formats: JPG, PNG, WebP
                         </p>
                       </div>
                     )}
