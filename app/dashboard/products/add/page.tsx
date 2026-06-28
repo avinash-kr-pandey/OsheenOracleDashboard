@@ -22,6 +22,7 @@ import Image from "next/image";
 import productAPI, { Product, ProductPayload, SizePrice, Review } from "@/utils/productApi";
 import productCategoryApi, { ProductCategory } from "@/utils/productCategoryApi";
 import { getFullImageUrl } from "@/utils/api";
+import { compressImage } from "@/utils/image";
 
 /* ======================
    CONSTANTS
@@ -264,8 +265,11 @@ export default function AddProduct({
       };
       reader.readAsDataURL(file);
 
+      // Compress image before upload
+      const compressedFile = await compressImage(file);
+
       // Upload to server
-      const uploadedUrl = await productAPI.uploadProductImage(file);
+      const uploadedUrl = await productAPI.uploadProductImage(compressedFile);
 
       if (uploadedUrl) {
         setForm((prev) => ({ ...prev, image: uploadedUrl }));
@@ -875,7 +879,10 @@ export default function AddProduct({
                             if (files.length === 0) return;
                             setUploadingImage(true);
                             try {
-                              const uploadPromises = files.map(file => productAPI.uploadProductImage(file));
+                              const compressedFiles = await Promise.all(
+                                files.map((f) => compressImage(f))
+                              );
+                              const uploadPromises = compressedFiles.map(file => productAPI.uploadProductImage(file));
                               const urls = await Promise.all(uploadPromises);
                               const validUrls = urls.filter((url): url is string => !!url);
                               if (validUrls.length > 0) {

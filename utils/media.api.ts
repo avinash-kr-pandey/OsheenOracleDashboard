@@ -1,5 +1,4 @@
-// utils/media.api.ts
-import { fetchData, postData, putData, deleteData } from "./api";
+import { fetchData, postData, putData, deleteData, postFormData } from "./api";
 
 // Types for Media
 export interface MediaFile {
@@ -46,21 +45,11 @@ export const mediaAPI = {
     formData.append("file", file);
 
     try {
-      const response = await fetch(
-        "https://api.osheenoracle.com/api/uploads/file-upload",
-        {
-          method: "POST",
-          body: formData,
-          // Don't set Content-Type - browser sets it with boundary
-        },
+      const response = await postFormData<MediaUploadResponse>(
+        "/uploads/file-upload",
+        formData,
       );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return response;
     } catch (error) {
       console.error("Upload error:", error);
       throw error;
@@ -108,6 +97,11 @@ export const mediaAPI = {
    * @returns Full URL to access the file
    */
   getFileUrl: (filename: string): string => {
+    if (typeof window !== "undefined") {
+      const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      const baseUrl = isLocal ? "http://localhost:5000" : "https://api.osheenoracle.com";
+      return `${baseUrl}/uploads/images/${filename}`;
+    }
     return `https://api.osheenoracle.com/uploads/images/${filename}`;
   },
 
@@ -117,6 +111,11 @@ export const mediaAPI = {
    * @returns Full URL to access the video
    */
   getVideoUrl: (filename: string): string => {
+    if (typeof window !== "undefined") {
+      const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      const baseUrl = isLocal ? "http://localhost:5000" : "https://api.osheenoracle.com";
+      return `${baseUrl}/uploads/videos/${filename}`;
+    }
     return `https://api.osheenoracle.com/uploads/videos/${filename}`;
   },
 };
