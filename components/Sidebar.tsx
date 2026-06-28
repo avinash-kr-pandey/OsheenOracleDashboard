@@ -387,16 +387,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/dashboard/orders",
       icon: <FiShoppingCart />,
       color: "text-orange-400",
-      submenu: [
-        { name: "Add Orders", href: "/dashboard/orders/add" },
-        { name: "View Orders", href: "/dashboard/orders/view" },
-      ],
-    },
-    {
-      name: "Reports",
-      href: "/dashboard/reports",
-      icon: <FiBarChart2 />,
-      color: "text-pink-400",
     },
     {
       name: "Services",
@@ -406,7 +396,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       submenu: [
         { name: "Energy Healing", href: "/dashboard/services/spells" },
         { name: "Reading", href: "/dashboard/services/reading" },
-        { name: "Services Package", href: "/dashboard/services/package" },
+        { name: "Book a Session / Packages", href: "/dashboard/services/package" },
       ],
     },
     {
@@ -426,23 +416,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       color: "text-pink-300",
     },
     {
-      name: "Astrologer",
-      href: "/dashboard/astrologer",
-      icon: <FiStar />,
-      color: "text-yellow-300",
-      submenu: [
-        { name: "Add Astrologer", href: "/dashboard/astrologer/add" },
-        { name: "View Astrologer", href: "/dashboard/astrologer/view" },
-      ],
-    },
-
-    {
-      name: "Contact",
-      href: "/dashboard/contact",
-      icon: <FiBarChart2 />,
-      color: "text-purple-400",
-    },
-    {
       name: "Horoscope Main",
       href: "/dashboard/horoscopemain",
       icon: <FiStar />,
@@ -456,16 +429,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       submenu: [
         { name: "Add Testimonial", href: "/dashboard/testimonial/add" },
         { name: "View Testimonial", href: "/dashboard/testimonial/view" },
-      ],
-    },
-    {
-      name: "Membership",
-      href: "/dashboard/membership",
-      icon: <FiSettings />,
-      color: "text-red-400",
-      submenu: [
-        { name: "Add Membership", href: "/dashboard/membership/add" },
-        { name: "View Membership", href: "/dashboard/membership/view" },
       ],
     },
     {

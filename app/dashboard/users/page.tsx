@@ -372,15 +372,12 @@ export default function UsersPage() {
 
                     {/* Role badge */}
                     <td className="py-4 px-6">
-                      <button
-                        onClick={() => handleRoleToggle(user)}
-                        disabled={updatingId !== null}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
                           user.type === "admin"
-                            ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
-                            : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                        } disabled:opacity-50`}
-                        title="Click to toggle user role"
+                            ? "bg-purple-50 border-purple-200 text-purple-700"
+                            : "bg-blue-50 border-blue-200 text-blue-700"
+                        }`}
                       >
                         {user.type === "admin" ? (
                           <>
@@ -393,7 +390,7 @@ export default function UsersPage() {
                             User
                           </>
                         )}
-                      </button>
+                      </div>
                     </td>
 
                     {/* Login method & verification state */}
