@@ -766,7 +766,7 @@ export default function AddProduct({
                       <img
                         src={getFullImageUrl(imagePreview) || DEFAULT_IMAGE}
                         alt="Preview"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain p-2"
                         onError={() => {
                           if (imagePreview !== DEFAULT_IMAGE) {
                             setImagePreview(DEFAULT_IMAGE);

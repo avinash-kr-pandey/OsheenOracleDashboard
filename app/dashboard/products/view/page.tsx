@@ -383,7 +383,7 @@ export default function ViewProduct() {
                 <img
                   src={getFullImageUrl(product.image) || "https://via.placeholder.com/400x300?text=Product"}
                   alt={product.name}
-                  className="w-full h-full object-cover absolute inset-0"
+                  className="w-full h-full object-contain p-2 absolute inset-0"
                 />
                 <div className="absolute top-3 right-3">
                   <span
@@ -481,7 +481,7 @@ export default function ViewProduct() {
                           <img
                             src={getFullImageUrl(product.image) || "https://via.placeholder.com/150?text=Product"}
                             alt={product.name}
-                            className="w-full h-full object-cover absolute inset-0"
+                            className="w-full h-full object-contain p-1 absolute inset-0"
                           />
                         </div>
                         <div>
