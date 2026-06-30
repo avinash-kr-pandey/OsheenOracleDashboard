@@ -13,8 +13,15 @@ interface Order {
   status: string;
   image?: string;
   quantity?: number;
+  totalAmount?: number;
   description?: string;
-  user?: string;
+  user?: any;
+  shippingAddress?: {
+    name?: string;
+    phone?: string;
+    address?: string;
+  };
+  phone?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -48,13 +55,13 @@ const ViewOrders = () => {
     try {
       setLoading(true);
       const response = await fetchData<ApiResponse>('/orders');
-      
+
       // DEBUG: Log the response to see structure
       console.log('Orders API Response:', response);
-      
+
       // Extract orders array from different possible response structures
       let ordersArray: Order[] = [];
-      
+
       if (Array.isArray(response)) {
         // Case 1: Direct array response
         ordersArray = response;
@@ -69,28 +76,28 @@ const ViewOrders = () => {
           ordersArray = Array.isArray(response.data) ? response.data : [];
         }
       }
-      
+
       console.log('Extracted orders:', ordersArray);
-      
+
       if (!Array.isArray(ordersArray)) {
         console.error('Orders is not an array:', ordersArray);
         toast.error('Invalid data format received from server');
         setOrders([]);
         return;
       }
-      
+
       setOrders(ordersArray);
-      
+
     } catch (error: any) {
       console.error('Error fetching orders:', error);
-      
+
       // Check for authentication error
       if (error.response?.status === 401) {
         toast.error('Please login to view orders');
         router.push('/login');
         return;
       }
-      
+
       toast.error('Failed to load orders');
       setOrders([]); // Set empty array on error
     } finally {
@@ -107,30 +114,30 @@ const ViewOrders = () => {
 
     try {
       setLoading(true);
-      
+
       // PUT request to update order status (protected route)
       await putData(`/orders/${orderId}/status`, { status: statusUpdate });
-      
+
       // Update local state
-      setOrders(prev => 
-        Array.isArray(prev) ? 
-        prev.map(order => 
-          order._id === orderId ? { ...order, status: statusUpdate } : order
-        ) : []
+      setOrders(prev =>
+        Array.isArray(prev) ?
+          prev.map(order =>
+            order._id === orderId ? { ...order, status: statusUpdate } : order
+          ) : []
       );
-      
+
       setEditingId(null);
       setStatusUpdate('');
       toast.success('Order status updated successfully!');
     } catch (error: any) {
       console.error('Error updating order status:', error);
-      
+
       if (error.response?.status === 401) {
         toast.error('Please login to update orders');
         router.push('/login');
         return;
       }
-      
+
       toast.error('Failed to update order status');
     } finally {
       setLoading(false);
@@ -142,23 +149,23 @@ const ViewOrders = () => {
     try {
       setLoading(true);
       await deleteData(`/orders/${orderId}`);
-      
+
       // Remove from local state
-      setOrders(prev => 
-        Array.isArray(prev) ? 
-        prev.filter(order => order._id !== orderId) : []
+      setOrders(prev =>
+        Array.isArray(prev) ?
+          prev.filter(order => order._id !== orderId) : []
       );
       setShowDeleteConfirm(null);
       toast.success('Order deleted successfully!');
     } catch (error: any) {
       console.error('Error deleting order:', error);
-      
+
       if (error.response?.status === 401) {
         toast.error('Please login to delete orders');
         router.push('/login');
         return;
       }
-      
+
       toast.error('Failed to delete order');
     } finally {
       setLoading(false);
@@ -167,13 +174,13 @@ const ViewOrders = () => {
 
   // Filter orders based on search and status
   const filteredOrders = Array.isArray(orders) ? orders.filter(order => {
-    const matchesSearch = 
+    const matchesSearch =
       order.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.description && order.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = 
+
+    const matchesStatus =
       statusFilter === 'all' || order.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   }) : [];
 
@@ -186,11 +193,11 @@ const ViewOrders = () => {
 
   // Calculate statistics (with safety checks)
   const totalOrders = Array.isArray(orders) ? orders.length : 0;
-  const totalRevenue = Array.isArray(orders) ? 
+  const totalRevenue = Array.isArray(orders) ?
     orders.reduce((sum, order) => sum + (order.price * (order.quantity || 1)), 0) : 0;
-  const pendingOrders = Array.isArray(orders) ? 
+  const pendingOrders = Array.isArray(orders) ?
     orders.filter(o => o.status?.toLowerCase() === 'pending').length : 0;
-  const reachedOrders = Array.isArray(orders) ? 
+  const reachedOrders = Array.isArray(orders) ?
     orders.filter(o => o.status?.toLowerCase() === 'reached').length : 0;
 
   // Format date
@@ -234,7 +241,7 @@ const ViewOrders = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-50 p-4 md:p-6">
       <Toaster position="top-right" />
-      
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -243,12 +250,12 @@ const ViewOrders = () => {
               <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Order Management</h1>
               <p className="text-gray-600">View and manage all customer orders</p>
             </div>
-            <button
+            {/* <button
               onClick={() => router.push('/dashboard/orders/add')}
               className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-medium py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
             >
               + Create New Order
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -289,7 +296,7 @@ const ViewOrders = () => {
                 </svg>
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <select
                 value={statusFilter}
@@ -303,7 +310,7 @@ const ViewOrders = () => {
                 <option value="reached">Reached</option>
                 <option value="cancelled">Cancelled</option>
               </select>
-              
+
               <button
                 onClick={fetchOrders}
                 className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-5 rounded-lg transition"
@@ -351,13 +358,13 @@ const ViewOrders = () => {
                   </svg>
                 </div>
                 <h3 className="text-lg font-medium text-gray-700 mb-2">
-                  {searchTerm || statusFilter !== 'all' 
-                    ? 'No orders found matching your criteria' 
+                  {searchTerm || statusFilter !== 'all'
+                    ? 'No orders found matching your criteria'
                     : 'No orders found'}
                 </h3>
                 <p className="text-gray-500 mb-6">
-                  {searchTerm || statusFilter !== 'all' 
-                    ? 'Try changing your search or filter criteria' 
+                  {searchTerm || statusFilter !== 'all'
+                    ? 'Try changing your search or filter criteria'
                     : 'Create your first order to get started'}
                 </p>
                 <button
@@ -388,8 +395,8 @@ const ViewOrders = () => {
                           <td className="px-6 py-4">
                             <div className="flex items-center">
                               {order.image ? (
-                                <img 
-                                  src={order.image} 
+                                <img
+                                  src={order.image}
                                   alt={order.productName}
                                   className="h-12 w-12 rounded-lg object-cover mr-4"
                                 />
@@ -414,10 +421,13 @@ const ViewOrders = () => {
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm">
-                              <div className="text-gray-900">
+                              <div className="text-gray-900 font-semibold">
                                 {formatCurrency(order.price || 0)} × {order.quantity || 1}
                               </div>
-                              <div className="text-gray-500 mt-1">
+                              <div className="text-gray-600 font-medium mt-0.5">
+                                By: {order.user && typeof order.user === 'object' ? order.user.name : order.shippingAddress?.name || 'Guest User'}
+                              </div>
+                              <div className="text-gray-400 text-xs mt-0.5 font-mono">
                                 ID: {order._id?.substring(0, 8) || 'N/A'}...
                               </div>
                             </div>
@@ -584,29 +594,55 @@ const ViewOrders = () => {
                     <h4 className="text-2xl font-bold text-gray-100">
                       {selectedOrder.productName}
                     </h4>
-                    
+
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300">
                       <div>Price per Unit:</div>
                       <div className="font-semibold text-white">{formatCurrency(selectedOrder.price)}</div>
-                      
+
                       <div>Quantity:</div>
                       <div className="font-semibold text-white">{selectedOrder.quantity || 1}</div>
-                      
                       <div>Total Amount:</div>
                       <div className="font-bold text-green-400 text-lg">
-                        {formatCurrency((selectedOrder.price || 0) * (selectedOrder.quantity || 1))}
+                        {formatCurrency(selectedOrder.totalAmount || ((selectedOrder.price || 0) * (selectedOrder.quantity || 1)))}
                       </div>
                       
                       <div>Order Date:</div>
                       <div className="text-gray-400">{formatDate(selectedOrder.createdAt)}</div>
 
-                      <div>User ID:</div>
-                      <div className="text-gray-400 font-mono text-xs truncate" title={selectedOrder.user}>
-                        {selectedOrder.user || 'Guest User'}
+                      <div>Customer Name:</div>
+                      <div className="text-gray-200 font-semibold">
+                        {selectedOrder.user && typeof selectedOrder.user === 'object' 
+                          ? selectedOrder.user.name 
+                          : selectedOrder.shippingAddress?.name || 'Guest User'}
+                      </div>
+
+                      <div>Customer Email:</div>
+                      <div className="text-gray-300 font-medium">
+                        {selectedOrder.user && typeof selectedOrder.user === 'object' 
+                          ? selectedOrder.user.email 
+                          : 'N/A'}
+                      </div>
+
+                      <div>User ID / ID:</div>
+                      <div className="text-gray-400 font-mono text-xs truncate" title={selectedOrder.user && typeof selectedOrder.user === 'object' ? selectedOrder.user._id : selectedOrder.user}>
+                        {selectedOrder.user && typeof selectedOrder.user === 'object' 
+                          ? selectedOrder.user._id 
+                          : selectedOrder.user || 'Guest / Unregistered'}
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {selectedOrder.shippingAddress && (
+                  <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
+                    <h5 className="text-sm font-semibold text-amber-400 mb-2">📍 Shipping Address & Delivery Contact</h5>
+                    <div className="space-y-1.5 text-sm text-gray-300">
+                      <p><span className="text-gray-500 font-medium">Recipient Name:</span> <span className="text-white font-semibold">{selectedOrder.shippingAddress.name}</span></p>
+                      <p><span className="text-gray-500 font-medium">Contact Phone:</span> <span className="text-white font-semibold">{selectedOrder.shippingAddress.phone || selectedOrder.phone || 'N/A'}</span></p>
+                      <p><span className="text-gray-500 font-medium">Delivery Address:</span> <span className="text-white font-semibold leading-relaxed">{selectedOrder.shippingAddress.address}</span></p>
+                    </div>
+                  </div>
+                )}
 
                 {selectedOrder.description && (
                   <div className="bg-gray-800/40 border border-gray-800 p-4 rounded-xl">
@@ -623,7 +659,7 @@ const ViewOrders = () => {
                       {(selectedOrder.status || 'unknown').toUpperCase()}
                     </span>
                   </div>
-                  
+
                   <div className="flex gap-2 w-full sm:w-auto">
                     <select
                       value={statusUpdate || selectedOrder.status}
@@ -636,7 +672,7 @@ const ViewOrders = () => {
                       <option value="reached">Reached</option>
                       <option value="cancelled">Cancelled</option>
                     </select>
-                    
+
                     <button
                       onClick={async () => {
                         await handleStatusUpdate(selectedOrder._id);
