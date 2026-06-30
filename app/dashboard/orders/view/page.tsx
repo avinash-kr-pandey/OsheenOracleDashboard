@@ -189,9 +189,9 @@ const ViewOrders = () => {
   const totalRevenue = Array.isArray(orders) ? 
     orders.reduce((sum, order) => sum + (order.price * (order.quantity || 1)), 0) : 0;
   const pendingOrders = Array.isArray(orders) ? 
-    orders.filter(o => o.status === 'pending').length : 0;
-  const deliveredOrders = Array.isArray(orders) ? 
-    orders.filter(o => o.status === 'delivered').length : 0;
+    orders.filter(o => o.status?.toLowerCase() === 'pending').length : 0;
+  const reachedOrders = Array.isArray(orders) ? 
+    orders.filter(o => o.status?.toLowerCase() === 'reached').length : 0;
 
   // Format date
   const formatDate = (dateString?: string) => {
@@ -223,9 +223,9 @@ const ViewOrders = () => {
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'processing': return 'bg-blue-100 text-blue-800';
+      case 'packed': return 'bg-indigo-100 text-indigo-800';
       case 'shipped': return 'bg-purple-100 text-purple-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
+      case 'reached': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -267,8 +267,8 @@ const ViewOrders = () => {
             <p className="text-3xl font-bold">{pendingOrders}</p>
           </div>
           <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-5 rounded-xl shadow">
-            <h3 className="text-sm font-semibold opacity-90 mb-1">Delivered</h3>
-            <p className="text-3xl font-bold">{deliveredOrders}</p>
+            <h3 className="text-sm font-semibold opacity-90 mb-1">Reached</h3>
+            <p className="text-3xl font-bold">{reachedOrders}</p>
           </div>
         </div>
 
@@ -298,9 +298,9 @@ const ViewOrders = () => {
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
+                <option value="packed">Packed</option>
                 <option value="shipped">Shipped</option>
-                <option value="delivered">Delivered</option>
+                <option value="reached">Reached</option>
                 <option value="cancelled">Cancelled</option>
               </select>
               
@@ -432,9 +432,9 @@ const ViewOrders = () => {
                                 >
                                   <option value="">Select Status</option>
                                   <option value="pending">Pending</option>
-                                  <option value="processing">Processing</option>
+                                  <option value="packed">Packed</option>
                                   <option value="shipped">Shipped</option>
-                                  <option value="delivered">Delivered</option>
+                                  <option value="reached">Reached</option>
                                   <option value="cancelled">Cancelled</option>
                                 </select>
                                 <button
@@ -631,9 +631,9 @@ const ViewOrders = () => {
                       className="bg-gray-800 border border-gray-700 rounded-lg text-sm px-3 py-2 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
                     >
                       <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
+                      <option value="packed">Packed</option>
                       <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
+                      <option value="reached">Reached</option>
                       <option value="cancelled">Cancelled</option>
                     </select>
                     
