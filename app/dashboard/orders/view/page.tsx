@@ -44,11 +44,60 @@ const ViewOrders = () => {
   const [statusUpdate, setStatusUpdate] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [newOrderNotification, setNewOrderNotification] = useState<Order | null>(null);
 
   // Fetch orders on component mount
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // Background polling for new orders
+  useEffect(() => {
+    if (loading) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetchData<ApiResponse>('/orders');
+        let latestOrdersArray: Order[] = [];
+        
+        if (Array.isArray(response)) {
+          latestOrdersArray = response;
+        } else if (response && typeof response === 'object') {
+          if (Array.isArray(response.data)) {
+            latestOrdersArray = response.data;
+          } else if (Array.isArray(response.orders)) {
+            latestOrdersArray = response.orders;
+          }
+        }
+
+        // Compare the fetched orders list against our current list in state
+        const existingIds = new Set(orders.map(o => o._id));
+        const newOrders = latestOrdersArray.filter(o => !existingIds.has(o._id));
+        
+        if (newOrders.length > 0) {
+          // Trigger a popup card for the newest order
+          const newest = newOrders[0];
+          setNewOrderNotification(newest);
+          
+          // Play a gentle notification sound
+          try {
+            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-200.wav");
+            audio.volume = 0.5;
+            audio.play();
+          } catch (soundErr) {
+            console.log("Audio play blocked:", soundErr);
+          }
+          
+          setOrders(latestOrdersArray);
+          toast.success("🔔 New order received!");
+        }
+      } catch (err) {
+        console.error("Error in orders polling:", err);
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [orders, loading]);
 
   // GET request to fetch all orders (protected route)
   const fetchOrders = async () => {
@@ -696,6 +745,72 @@ const ViewOrders = () => {
                   className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2.5 rounded-lg text-sm font-medium transition"
                 >
                   Close Details
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating New Order Alert Popup Card */}
+        {newOrderNotification && (
+          <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-slate-900 border border-amber-500/50 rounded-2xl shadow-2xl overflow-hidden text-white animate-bounce-in">
+            <div className="p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                </span>
+                <h4 className="font-bold text-amber-400 text-xs tracking-wide uppercase">New Order Received!</h4>
+              </div>
+              <button 
+                onClick={() => setNewOrderNotification(null)}
+                className="text-gray-400 hover:text-white transition p-1 hover:bg-slate-800 rounded-lg"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="flex gap-3">
+                {newOrderNotification.image ? (
+                  <img 
+                    src={newOrderNotification.image} 
+                    alt={newOrderNotification.productName} 
+                    className="w-16 h-16 rounded-lg object-cover border border-slate-800"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-lg bg-amber-500/10 flex items-center justify-center border border-slate-800">
+                    <span className="text-amber-500 font-bold text-xl">{newOrderNotification.productName?.charAt(0)}</span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-100 truncate">{newOrderNotification.productName}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    By: {newOrderNotification.user && typeof newOrderNotification.user === 'object' 
+                      ? newOrderNotification.user.name 
+                      : newOrderNotification.shippingAddress?.name || 'Guest User'}
+                  </p>
+                  <p className="text-sm font-extrabold text-green-400 mt-1">
+                    {formatCurrency((newOrderNotification.price || 0) * (newOrderNotification.quantity || 1))}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 border-t border-slate-800 pt-3">
+                <button
+                  onClick={() => {
+                    setSelectedOrder(newOrderNotification);
+                    setNewOrderNotification(null);
+                  }}
+                  className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold text-xs py-2 rounded-lg transition text-center shadow-md cursor-pointer"
+                >
+                  View Details
+                </button>
+                <button
+                  onClick={() => setNewOrderNotification(null)}
+                  className="px-3 bg-slate-800 hover:bg-slate-700 text-gray-300 font-semibold text-xs py-2 rounded-lg transition cursor-pointer"
+                >
+                  Dismiss
                 </button>
               </div>
             </div>
