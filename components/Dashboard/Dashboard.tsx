@@ -201,11 +201,20 @@ const Dashboard = () => {
 
   // Get status badge color
   const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'shipped': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+    const s = (status || '').toLowerCase();
+    switch(s) {
+      case 'completed':
+      case 'reached': 
+        return 'bg-green-100 text-green-800';
+      case 'pending': 
+        return 'bg-yellow-100 text-yellow-800';
+      case 'shipped':
+      case 'packed': 
+        return 'bg-blue-100 text-blue-800';
+      case 'cancelled': 
+        return 'bg-red-100 text-red-800';
+      default: 
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -458,29 +467,39 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.recentOrders.map((order) => (
-                    <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-4">
-                        <div className="flex items-center">
-                          <Package className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="font-medium">#{order.id}</span>
-                        </div>
+                  {data.recentOrders && data.recentOrders.length > 0 ? (
+                    data.recentOrders.map((order) => (
+                      <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td className="py-4">
+                          <div className="flex items-center">
+                            <Package className="h-4 w-4 text-gray-400 mr-2" />
+                            <span className="font-mono text-xs font-semibold text-gray-700">
+                              #{typeof order.id === 'string' && order.id.length > 8 ? `${order.id.substring(0, 8)}...` : order.id}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4">
+                          <div>
+                            <div className="font-medium text-gray-900">{order.customerName}</div>
+                            <div className="text-xs text-gray-500 max-w-[180px] truncate" title={order.product}>{order.product}</div>
+                          </div>
+                        </td>
+                        <td className="py-4 font-medium text-gray-900">{formatRupeesFull(order.amount)}</td>
+                        <td className="py-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${getStatusColor(order.status)}`}>
+                            {(order.status || 'pending').toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-4 text-gray-600 text-sm">{order.date}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-gray-400 text-sm">
+                        No recent orders found.
                       </td>
-                      <td className="py-4">
-                        <div>
-                          <div className="font-medium text-gray-900">{order.customerName}</div>
-                          <div className="text-sm text-gray-500">{order.product}</div>
-                        </div>
-                      </td>
-                      <td className="py-4 font-medium text-gray-900">{formatRupeesFull(order.amount)}</td>
-                      <td className="py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="py-4 text-gray-600">{order.date}</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
