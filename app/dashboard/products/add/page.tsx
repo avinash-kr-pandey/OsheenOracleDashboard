@@ -810,13 +810,6 @@ export default function AddProduct({
                         </p>
                       </div>
                     )}
-
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                        <span>Recommended size: 600x400px</span>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Additional Images Section */}
