@@ -457,13 +457,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     },
     {
       name: "Benefit",
-      href: "/dashboard/benefit",
+      href: "/dashboard/benefit/view",
       icon: <FiSettings />,
       color: "text-blue-300",
-      submenu: [
-        { name: "Add Benefit", href: "/dashboard/benefit/add" },
-        { name: "View Benefit", href: "/dashboard/benefit/view" },
-      ],
     },
   ];
 

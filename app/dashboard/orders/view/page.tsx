@@ -63,10 +63,15 @@ const ViewOrders = () => {
         if (Array.isArray(response)) {
           latestOrdersArray = response;
         } else if (response && typeof response === 'object') {
-          if (Array.isArray(response.data)) {
-            latestOrdersArray = response.data;
-          } else if (Array.isArray(response.orders)) {
-            latestOrdersArray = response.orders;
+          const resObj = response as any;
+          if (Array.isArray(resObj.orders)) {
+            latestOrdersArray = resObj.orders;
+          } else if (Array.isArray(resObj.data)) {
+            latestOrdersArray = resObj.data;
+          } else if (resObj.success && Array.isArray(resObj.orders)) {
+            latestOrdersArray = resObj.orders;
+          } else if (resObj.success && Array.isArray(resObj.data)) {
+            latestOrdersArray = resObj.data;
           }
         }
 
@@ -116,13 +121,15 @@ const ViewOrders = () => {
         ordersArray = response;
       } else if (response && typeof response === 'object') {
         // Case 2: Object with data/orders property
-        if (Array.isArray(response.data)) {
-          ordersArray = response.data;
-        } else if (Array.isArray(response.orders)) {
-          ordersArray = response.orders;
-        } else if (response.success && response.data) {
-          // Try to parse if data is string
-          ordersArray = Array.isArray(response.data) ? response.data : [];
+        const resObj = response as any;
+        if (Array.isArray(resObj.orders)) {
+          ordersArray = resObj.orders;
+        } else if (Array.isArray(resObj.data)) {
+          ordersArray = resObj.data;
+        } else if (resObj.success && Array.isArray(resObj.orders)) {
+          ordersArray = resObj.orders;
+        } else if (resObj.success && Array.isArray(resObj.data)) {
+          ordersArray = resObj.data;
         }
       }
 
@@ -414,14 +421,8 @@ const ViewOrders = () => {
                 <p className="text-gray-500 mb-6">
                   {searchTerm || statusFilter !== 'all'
                     ? 'Try changing your search or filter criteria'
-                    : 'Create your first order to get started'}
+                    : 'No orders have been received from the website yet.'}
                 </p>
-                <button
-                  onClick={() => router.push('/dashboard/orders/add')}
-                  className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg hover:from-amber-700 hover:to-orange-700 transition"
-                >
-                  + Create New Order
-                </button>
               </div>
             ) : (
               /* Orders Table */
