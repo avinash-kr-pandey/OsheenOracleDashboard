@@ -32,7 +32,7 @@ export interface DashboardData {
     growth: number;
   }[];
   recentOrders: {
-    id: number;
+    id: number | string;
     customerName: string;
     product: string;
     amount: number;
