@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { fetchData } from "@/utils/api";
+import { fetchData, putData } from "@/utils/api";
 import type { Contact, ContactResponse } from "@/utils/api";
 import { toast, Toaster } from "react-hot-toast";
 import {
@@ -341,16 +341,37 @@ export default function ContactsPage() {
                 </p>
               </div>
 
-              <div className="pt-4 flex gap-3">
+              <div className="pt-4 flex gap-3 flex-wrap">
                 <button
                   onClick={() => setSelectedContact(null)}
-                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all text-sm"
+                  className="flex-1 min-w-[80px] px-4 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all text-sm cursor-pointer"
                 >
                   Close
                 </button>
+                {selectedContact.status === "pending" && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await putData<any>(`/contact/${selectedContact._id}`, { status: "completed" });
+                        if (res.success) {
+                          toast.success("Inquiry marked as completed!");
+                          setContacts(prev => prev.map(c => c._id === selectedContact._id ? { ...c, status: "completed" } : c));
+                          setSelectedContact(prev => prev ? { ...prev, status: "completed" } : null);
+                        } else {
+                          toast.error("Failed to update status");
+                        }
+                      } catch (err) {
+                        toast.error("Failed to update status");
+                      }
+                    }}
+                    className="flex-1 min-w-[120px] px-4 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 text-sm text-center cursor-pointer"
+                  >
+                    Response Done
+                  </button>
+                )}
                 <a
                   href={`mailto:${selectedContact.email}?subject=Reply to your inquiry`}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-sm text-center"
+                  className="flex-1 min-w-[120px] px-4 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-sm text-center"
                 >
                   Reply via Email
                 </a>

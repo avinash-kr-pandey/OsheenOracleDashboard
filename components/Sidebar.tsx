@@ -329,6 +329,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       color: "text-pink-300",
       submenu: [
         { name: "Home Content", href: "/dashboard/home/content" },
+        { name: "Catalogue", href: "/dashboard/home/content?tab=catalogue" },
         { name: "Member Contents", href: "/dashboard/home/member" },
       ],
     },

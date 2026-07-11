@@ -10,6 +10,7 @@ import homeAPI, {
   AchievementsSection,
   CatalogueItem,
 } from "@/utils/home.api";
+import { API_BASE_URL } from "@/utils/api";
 import {
   CheckCircle,
   Edit2,
@@ -96,6 +97,13 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     fetchHomeData();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab === "catalogue") {
+        setActiveTab(4);
+      }
+    }
   }, []);
 
   const fetchHomeData = async (): Promise<void> => {
@@ -345,7 +353,7 @@ const Home: React.FC = () => {
             formDataToSend.append("imageUrl", imageValue);
             const token = localStorage.getItem("token");
             const fetchResponse = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/admin/media-spotlight`,
+              `${API_BASE_URL}/admin/media-spotlight`,
               {
                 method: "POST",
                 headers: { Authorization: token ? `Bearer ${token}` : "" },

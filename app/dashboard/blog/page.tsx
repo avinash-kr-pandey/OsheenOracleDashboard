@@ -302,6 +302,30 @@ const AdminBlogs: React.FC = () => {
     setImagePreview(url);
   };
 
+  const insertFormatting = (tagStart: string, tagEnd: string, targetId: string) => {
+    const textarea = document.getElementById(targetId) as HTMLTextAreaElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+    const replacement = tagStart + (selectedText || "text") + tagEnd;
+    
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    
+    setFormData({
+      ...formData,
+      description: newValue
+    });
+
+    // Re-focus and set selection
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + tagStart.length, start + tagStart.length + (selectedText || "text").length);
+    }, 0);
+  };
+
   const handleCreateBlog = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -759,7 +783,31 @@ const AdminBlogs: React.FC = () => {
                     <label className="block text-sm font-semibold text-gray-700">
                       Blog Content *
                     </label>
+                    <div className="flex gap-2 mb-2 p-1.5 bg-gray-50 border border-gray-200 rounded-lg flex-wrap items-center">
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<strong>", "</strong>", "blog-content-area")}
+                        className="px-2.5 py-1 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs"
+                      >
+                        B (Bold)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<span class='font-heading'>", "</span>", "blog-content-area")}
+                        className="px-2.5 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs font-semibold"
+                      >
+                        Font: Charm
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<span class='font-subheading'>", "</span>", "blog-content-area")}
+                        className="px-2.5 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs font-semibold"
+                      >
+                        Font: Cormorant
+                      </button>
+                    </div>
                     <textarea
+                      id="blog-content-area"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={12}
@@ -1400,7 +1448,31 @@ const AdminBlogs: React.FC = () => {
                     <label className="block text-sm font-semibold text-gray-700">
                       Content *
                     </label>
+                    <div className="flex gap-2 mb-2 p-1.5 bg-gray-50 border border-gray-200 rounded-lg flex-wrap items-center">
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<strong>", "</strong>", "edit-blog-content-area")}
+                        className="px-2.5 py-1 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs"
+                      >
+                        B (Bold)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<span class='font-heading'>", "</span>", "edit-blog-content-area")}
+                        className="px-2.5 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs font-semibold"
+                      >
+                        Font: Charm
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<span class='font-subheading'>", "</span>", "edit-blog-content-area")}
+                        className="px-2.5 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-100 cursor-pointer shadow-2xs font-semibold"
+                      >
+                        Font: Cormorant
+                      </button>
+                    </div>
                     <textarea
+                      id="edit-blog-content-area"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={10}

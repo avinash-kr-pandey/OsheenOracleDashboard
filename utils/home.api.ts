@@ -1,5 +1,5 @@
 // services/home.api.ts
-import { fetchData, postData, putData, deleteData } from "../utils/api";
+import { fetchData, postData, putData, deleteData, API_BASE_URL } from "./api";
 
 // ==================== TYPES ====================
 
@@ -519,7 +519,7 @@ export const uploadDiscoverImage = async (
 
   const token = localStorage.getItem("token");
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/admin/discover/image`,
+    `${API_BASE_URL}/admin/discover/image`,
     {
       method: "POST",
       headers: {
@@ -568,7 +568,7 @@ export const uploadDiscoverPathImage = async (
 
   const token = localStorage.getItem("token");
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/admin/discover-path/image`,
+    `${API_BASE_URL}/admin/discover-path/image`,
     {
       method: "POST",
       headers: {
@@ -602,7 +602,7 @@ export const addAchievementImage = async (
 
   const token = localStorage.getItem("token");
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/admin/achievements/image`,
+    `${API_BASE_URL}/admin/achievements/image`,
     {
       method: "POST",
       headers: {
@@ -641,7 +641,7 @@ export const addMediaSpotlight = async (
 
   const token = localStorage.getItem("token");
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/admin/media-spotlight`,
+    `${API_BASE_URL}/admin/media-spotlight`,
     {
       method: "POST",
       headers: {
@@ -776,7 +776,7 @@ export const uploadCatalogueImage = async (
 
   const token = localStorage.getItem("token");
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/admin/catalogue/image`,
+    `${API_BASE_URL}/admin/catalogue/image`,
     {
       method: "POST",
       headers: {
@@ -825,7 +825,7 @@ export const uploadExpertGuideImage = async (
 
   const token = localStorage.getItem("token");
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/admin/expert-guides/image`,
+    `${API_BASE_URL}/admin/expert-guides/image`,
     {
       method: "POST",
       headers: {

@@ -21,7 +21,7 @@ const getApiUrl = () => {
   );
 };
 
-const API_BASE_URL = getApiUrl();
+export const API_BASE_URL = getApiUrl();
 
 console.log("🔧 API Base URL:", API_BASE_URL);
 
