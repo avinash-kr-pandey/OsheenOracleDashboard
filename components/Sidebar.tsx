@@ -397,7 +397,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       submenu: [
         { name: "Energy Healing", href: "/dashboard/services/spells" },
         { name: "Reading", href: "/dashboard/services/reading" },
-        { name: "Book a Session / Packages", href: "/dashboard/services/package" },
+        { name: "Spiritual Services", href: "/dashboard/services/package" },
       ],
     },
     {
