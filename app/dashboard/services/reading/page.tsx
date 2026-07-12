@@ -10,6 +10,7 @@ import {
 } from "@/utils/reading.api";
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
+import { getFullImageUrl } from "@/utils/api";
 
 // Define proper types for API errors
 interface ApiError {
@@ -1164,7 +1165,7 @@ const AdminReading: React.FC = () => {
                       </label>
                       <div className="mt-2 relative h-40 w-40">
                         <Image
-                          src={(selectedItem as ReadingService).image as string}
+                          src={getFullImageUrl((selectedItem as ReadingService).image as string)}
                           alt={(selectedItem as ReadingService).name}
                           fill
                           className="object-cover rounded"

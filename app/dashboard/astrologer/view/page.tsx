@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { fetchData, putData, deleteData } from '@/utils/api';
+import { fetchData, putData, deleteData, getFullImageUrl } from '@/utils/api';
 import { toast, Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
@@ -319,7 +319,7 @@ const ViewAstrologers = () => {
                               <div className="flex items-center">
                                 <div className="h-12 w-12 flex-shrink-0 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mr-4">
                                   {astro.profileImage ? (
-                                    <img src={astro.profileImage} alt={astro.name} className="h-12 w-12 rounded-full object-cover" />
+                                    <img src={getFullImageUrl(astro.profileImage)} alt={astro.name} className="h-12 w-12 rounded-full object-cover" />
                                   ) : (
                                     <span className="text-xl font-bold text-blue-600">
                                       {astro.name.charAt(0).toUpperCase()}

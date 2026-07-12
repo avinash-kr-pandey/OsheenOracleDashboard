@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { toast, Toaster } from "react-hot-toast";
+import { getFullImageUrl } from "@/utils/api";
 import {
   FileText,
   User,
@@ -936,7 +937,7 @@ const AdminBlogs: React.FC = () => {
                     <div className="relative aspect-video w-full bg-gray-50 overflow-hidden">
                       {blog.image ? (
                         <img
-                          src={blog.image}
+                          src={getFullImageUrl(blog.image)}
                           alt={blog.title}
                           className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
                         />
@@ -1031,7 +1032,7 @@ const AdminBlogs: React.FC = () => {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="relative w-12 aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
                               {blog.image ? (
-                                <img src={blog.image} alt={blog.title} className="object-cover w-full h-full" />
+                                <img src={getFullImageUrl(blog.image)} alt={blog.title} className="object-cover w-full h-full" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-gray-400">
                                   <ImageIcon className="h-4 w-4" />

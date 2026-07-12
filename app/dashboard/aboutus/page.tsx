@@ -3,6 +3,7 @@
 import { aboutAPI, AboutDataType } from "@/utils/about.api";
 import React, { useState, useEffect } from "react";
 import { toast, Toaster } from "react-hot-toast";
+import { getFullImageUrl } from "@/utils/api";
 
 const AboutPage = () => {
   const [aboutData, setAboutData] = useState<AboutDataType | null>(null);
@@ -459,7 +460,7 @@ const AboutPage = () => {
                         {section.image && (
                           <div className="relative h-64 w-full bg-gray-100">
                             <img
-                              src={section.image}
+                              src={getFullImageUrl(section.image)}
                               alt={section.title}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -801,7 +802,7 @@ const AboutPage = () => {
                           {(section.image || previewImages[index]) && (
                             <div className="relative w-full h-40 mb-2 rounded-lg overflow-hidden border border-gray-200 bg-white">
                               <img
-                                src={previewImages[index] || section.image}
+                                src={previewImages[index] || getFullImageUrl(section.image)}
                                 alt="Preview"
                                 className="w-full h-full object-cover"
                                 onError={(e) => {

@@ -1693,7 +1693,7 @@ const ExpertGuidesEditor: React.FC<{
           >
             {guide.image && (
               <img
-                src={guide.image}
+                src={getFullImageUrl(guide.image)}
                 alt={guide.name}
                 className="w-full h-56 object-cover"
               />
