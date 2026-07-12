@@ -451,6 +451,29 @@ const Home: React.FC = () => {
       }
 
       if (response?.success) {
+        // Automatically upload image file if selected in dialog modal
+        if (imageFile) {
+          let itemId = (selectedItem?._id as string) || "";
+          if (dialogType === "add" && Array.isArray(response.data) && response.data.length > 0) {
+            itemId = response.data[response.data.length - 1]._id || "";
+          }
+          
+          if (itemId) {
+            console.log(`🚀 Auto-uploading image for ${dialogSection} ID: ${itemId}`);
+            try {
+              if (dialogSection === "catalogue") {
+                await homeAPI.uploadCatalogueImage(itemId, imageFile);
+              } else if (dialogSection === "discoverPath") {
+                await homeAPI.uploadDiscoverPathImage(itemId, imageFile);
+              } else if (dialogSection === "expertGuide") {
+                await homeAPI.uploadExpertGuideImage(itemId, imageFile);
+              }
+            } catch (uploadErr) {
+              console.error("Auto-upload image error:", uploadErr);
+            }
+          }
+        }
+
         showSnackbar(
           `${dialogSection} ${dialogType === "add" ? "added" : "updated"} successfully`,
           "success",
