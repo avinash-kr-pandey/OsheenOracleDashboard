@@ -686,15 +686,15 @@ export const addCatalogue = async (
 
   // Transform frontend form data to backend schema format
   const transformedData: Partial<CatalogueItem> = {
-    name: data.title || "",
+    name: data.name || data.title || "",
     price: data.price || "0",
     rating: data.rating || 4.5,
     image: data.image || "",
     description: data.description || "",
     traits:
-      data.details?.keyTraits?.map((t: any) => t.trait).filter(Boolean) || [],
+      data.traits || data.details?.keyTraits?.map((t: any) => t.trait).filter(Boolean) || [],
     benefits:
-      data.details?.benefits?.map((b: any) => b.benefit).filter(Boolean) || [],
+      data.benefits || data.details?.benefits?.map((b: any) => b.benefit).filter(Boolean) || [],
     readingIncludes: data.readingIncludes || [],
     strengths: data.strengths || [],
     challenges: data.challenges || [],

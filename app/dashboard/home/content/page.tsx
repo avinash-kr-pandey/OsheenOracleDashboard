@@ -149,7 +149,21 @@ const Home: React.FC = () => {
     if (type === "add") {
       setFormData(getDefaultFormData(section));
     } else if (item) {
-      setFormData(item);
+      if (section === "catalogue") {
+        const mappedItem = {
+          ...item,
+          title: item.name || item.title || "",
+          traits: Array.isArray(item.traits)
+            ? item.traits.map((t: any) => typeof t === "string" ? { trait: t } : t)
+            : [],
+          benefits: Array.isArray(item.benefits)
+            ? item.benefits.map((b: any) => typeof b === "string" ? { benefit: b } : b)
+            : [],
+        };
+        setFormData(mappedItem);
+      } else {
+        setFormData(item);
+      }
     }
     setImageFile(null);
     setImagePreview("");
@@ -371,13 +385,17 @@ const Home: React.FC = () => {
         }
         case "catalogue": {
           const transformedData = {
-            name: (formData.title as string) || "",
+            name: (formData.title as string) || (formData.name as string) || "",
             description: (formData.description as string) || "",
             price: (formData.price as string) || "0",
             rating: (formData.rating as number) || 4.5,
             image: imageValue,
-            traits: (formData.traits as string[]) || [],
-            benefits: (formData.benefits as string[]) || [],
+            traits: Array.isArray(formData.traits)
+              ? (formData.traits as any[]).map(t => typeof t === 'string' ? t : (t.trait || '')).filter(Boolean)
+              : [],
+            benefits: Array.isArray(formData.benefits)
+              ? (formData.benefits as any[]).map(b => typeof b === 'string' ? b : (b.benefit || '')).filter(Boolean)
+              : [],
             readingIncludes: (formData.readingIncludes as string[]) || [],
             strengths: (formData.strengths as string[]) || [],
             challenges: (formData.challenges as string[]) || [],
@@ -1540,13 +1558,15 @@ const CatalogueEditor: React.FC<{
         {data.map((item) => (
           <div
             key={item._id}
-            className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+            className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition"
           >
             {item.image && (
-              <img
+              <Image
                 src={item.image}
                 alt={item.name}
                 className="w-full h-48 object-cover"
+                width={300}
+                height={200}
               />
             )}
             <div className="p-4">
@@ -1889,8 +1909,11 @@ const FormDialogContent: React.FC<{
             </label>
             <input
               type="text"
-              value={(formData.title as string) || ""}
-              onChange={(e) => onFormChange("title", e.target.value)}
+              value={(formData.title as string) || (formData.name as string) || ""}
+              onChange={(e) => {
+                onFormChange("title", e.target.value);
+                onFormChange("name", e.target.value);
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>

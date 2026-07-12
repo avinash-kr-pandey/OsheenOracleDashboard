@@ -22,6 +22,9 @@ interface Order {
     address?: string;
   };
   phone?: string;
+  trackingId?: string;
+  carrier?: string;
+  deliveryDate?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -45,6 +48,10 @@ const ViewOrders = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [newOrderNotification, setNewOrderNotification] = useState<Order | null>(null);
+
+  const [trackingIdUpdate, setTrackingIdUpdate] = useState<string>('');
+  const [carrierUpdate, setCarrierUpdate] = useState<string>('');
+  const [deliveryDateUpdate, setDeliveryDateUpdate] = useState<string>('');
 
   // Fetch orders on component mount
   useEffect(() => {
@@ -172,18 +179,28 @@ const ViewOrders = () => {
       setLoading(true);
 
       // PUT request to update order status (protected route)
-      await putData(`/orders/${orderId}/status`, { status: statusUpdate });
+      await putData(`/orders/${orderId}/status`, { 
+        status: statusUpdate,
+        trackingId: trackingIdUpdate,
+        carrier: carrierUpdate,
+        deliveryDate: deliveryDateUpdate
+      });
 
       // Update local state
       setOrders(prev =>
         Array.isArray(prev) ?
           prev.map(order =>
-            order._id === orderId ? { ...order, status: statusUpdate } : order
+            order._id === orderId ? { 
+              ...order, 
+              status: statusUpdate,
+              trackingId: trackingIdUpdate,
+              carrier: carrierUpdate,
+              deliveryDate: deliveryDateUpdate
+            } : order
           ) : []
       );
 
       setEditingId(null);
-      setStatusUpdate('');
       toast.success('Order status updated successfully!');
     } catch (error: any) {
       console.error('Error updating order status:', error);
@@ -553,6 +570,10 @@ const ViewOrders = () => {
                               <button
                                 onClick={() => {
                                   setSelectedOrder(order);
+                                  setStatusUpdate(order.status || '');
+                                  setTrackingIdUpdate(order.trackingId || '');
+                                  setCarrierUpdate(order.carrier || '');
+                                  setDeliveryDateUpdate(order.deliveryDate || '');
                                 }}
                                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
                               >
@@ -663,6 +684,15 @@ const ViewOrders = () => {
                       <div>Order Date:</div>
                       <div className="text-gray-400">{formatDate(selectedOrder.createdAt)}</div>
 
+                      <div>Tracking ID:</div>
+                      <div className="text-gray-300 font-semibold">{selectedOrder.trackingId || 'N/A'}</div>
+
+                      <div>Carrier:</div>
+                      <div className="text-gray-300 font-semibold">{selectedOrder.carrier || 'N/A'}</div>
+
+                      <div>Delivery Date:</div>
+                      <div className="text-gray-300 font-semibold">{selectedOrder.deliveryDate || 'N/A'}</div>
+
                       <div>Customer Name:</div>
                       <div className="text-gray-200 font-semibold">
                         {selectedOrder.user && typeof selectedOrder.user === 'object' 
@@ -705,36 +735,77 @@ const ViewOrders = () => {
                   </div>
                 )}
 
-                {/* Status Section inside modal */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-800/20 border border-gray-800 rounded-xl gap-4">
-                  <div>
-                    <span className="text-sm text-gray-400 block mb-1">Current Status</span>
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(selectedOrder.status || '')}`}>
-                      {(selectedOrder.status || 'unknown').toUpperCase()}
-                    </span>
+                {/* Status & Shipment Update Section inside modal */}
+                <div className="p-4 bg-gray-800/20 border border-gray-800 rounded-xl space-y-4">
+                  <h5 className="text-sm font-semibold text-amber-400">Update Order Process & Shipment Details</h5>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1 font-semibold">Order Status</label>
+                      <select
+                        value={statusUpdate || selectedOrder.status}
+                        onChange={(e) => setStatusUpdate(e.target.value)}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg text-sm px-3 py-2 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="packed">Packed</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="transit">Transit</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="reached">Reached</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1 font-semibold">Tracking ID</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. TRK12345678"
+                        value={trackingIdUpdate}
+                        onChange={(e) => setTrackingIdUpdate(e.target.value)}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg text-sm px-3 py-2 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1 font-semibold">Carrier / Shipping Method</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Delhivery, BlueDart"
+                        value={carrierUpdate}
+                        onChange={(e) => setCarrierUpdate(e.target.value)}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg text-sm px-3 py-2 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1 font-semibold">Expected / Actual Delivery Date</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. July 20, 2026"
+                        value={deliveryDateUpdate}
+                        onChange={(e) => setDeliveryDateUpdate(e.target.value)}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg text-sm px-3 py-2 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <select
-                      value={statusUpdate || selectedOrder.status}
-                      onChange={(e) => setStatusUpdate(e.target.value)}
-                      className="bg-gray-800 border border-gray-700 rounded-lg text-sm px-3 py-2 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="packed">Packed</option>
-                      <option value="shipped">Shipped</option>
-                      <option value="reached">Reached</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-
+                  <div className="flex justify-end pt-2">
                     <button
                       onClick={async () => {
                         await handleStatusUpdate(selectedOrder._id);
-                        setSelectedOrder(prev => prev ? { ...prev, status: statusUpdate || prev.status } : null);
+                        setSelectedOrder(prev => prev ? { 
+                          ...prev, 
+                          status: statusUpdate || prev.status,
+                          trackingId: trackingIdUpdate,
+                          carrier: carrierUpdate,
+                          deliveryDate: deliveryDateUpdate
+                        } : null);
                       }}
-                      className="bg-amber-600 hover:bg-amber-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition"
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm px-6 py-2 rounded-lg transition shadow-md hover:shadow-lg"
                     >
-                      Save Status
+                      Save Process Details
                     </button>
                   </div>
                 </div>
@@ -805,6 +876,10 @@ const ViewOrders = () => {
                 <button
                   onClick={() => {
                     setSelectedOrder(newOrderNotification);
+                    setStatusUpdate(newOrderNotification.status || '');
+                    setTrackingIdUpdate(newOrderNotification.trackingId || '');
+                    setCarrierUpdate(newOrderNotification.carrier || '');
+                    setDeliveryDateUpdate(newOrderNotification.deliveryDate || '');
                     setNewOrderNotification(null);
                   }}
                   className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold text-xs py-2 rounded-lg transition text-center shadow-md cursor-pointer"
