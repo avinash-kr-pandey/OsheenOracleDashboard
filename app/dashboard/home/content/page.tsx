@@ -49,6 +49,21 @@ interface CatalogueItemType extends CatalogueItem {
 
 // ==================== UTILITY FUNCTIONS ====================
 
+const getFullImageUrl = (imagePath?: string): string => {
+  if (!imagePath) return "";
+  if (
+    imagePath.startsWith("http://") ||
+    imagePath.startsWith("https://") ||
+    imagePath.startsWith("data:") ||
+    imagePath.startsWith("blob:")
+  ) {
+    return imagePath;
+  }
+  const baseUrl = API_BASE_URL.replace(/\/api\/?$/, "");
+  const formattedPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  return `${baseUrl}${formattedPath}`;
+};
+
 const ensureFields = <T extends Record<string, unknown>>(
   data: Partial<T>,
   defaults: T,
@@ -977,7 +992,7 @@ const DiscoverSectionEditor: React.FC<{
           {(maaImagePreview || osheenMaa.image) && (
             <div className="mt-2">
               <img
-                src={maaImagePreview || osheenMaa.image}
+                src={maaImagePreview || getFullImageUrl(osheenMaa.image)}
                 alt="Preview"
                 className="w-full max-h-48 object-cover rounded-lg"
               />
@@ -1067,7 +1082,7 @@ const DiscoverSectionEditor: React.FC<{
           {(oracleImagePreview || osheenOracle.image) && (
             <div className="mt-2">
               <img
-                src={oracleImagePreview || osheenOracle.image}
+                src={oracleImagePreview || getFullImageUrl(osheenOracle.image)}
                 alt="Preview"
                 className="w-full max-h-48 object-cover rounded-lg"
               />
@@ -1117,7 +1132,7 @@ const DiscoverPathEditor: React.FC<{
           >
             {item.image && (
               <Image
-                src={item.image}
+                src={getFullImageUrl(item.image)}
                 alt={item.title}
                 className="w-full h-48 object-cover"
                 width={300}
@@ -1397,7 +1412,7 @@ const AchievementsEditor: React.FC<{
           {homeData?.achievements?.images?.map((img) => (
             <div key={img._id} className="relative group">
               <img
-                src={img.url}
+                src={getFullImageUrl(img.url)}
                 alt={img.caption}
                 className="w-full h-32 object-cover rounded-lg"
               />
@@ -1508,7 +1523,7 @@ const MediaSpotlightEditor: React.FC<{
           >
             {item.image && (
               <img
-                src={item.image}
+                src={getFullImageUrl(item.image)}
                 alt={item.title}
                 className="w-full h-48 object-cover"
               />
@@ -1585,7 +1600,7 @@ const CatalogueEditor: React.FC<{
           >
             {item.image && (
               <Image
-                src={item.image}
+                src={getFullImageUrl(item.image)}
                 alt={item.name}
                 className="w-full h-48 object-cover"
                 width={300}
