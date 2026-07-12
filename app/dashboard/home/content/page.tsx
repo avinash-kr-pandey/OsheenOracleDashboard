@@ -52,6 +52,9 @@ interface CatalogueItemType extends CatalogueItem {
 const getFullImageUrl = (imagePath?: string): string => {
   if (!imagePath) return "";
   if (
+    imagePath.startsWith("/images/") ||
+    imagePath.startsWith("/assets/") ||
+    imagePath.startsWith("/media/") ||
     imagePath.startsWith("http://") ||
     imagePath.startsWith("https://") ||
     imagePath.startsWith("data:") ||
