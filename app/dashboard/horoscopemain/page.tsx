@@ -954,12 +954,14 @@ const Horoscope = () => {
                   </label>
                   <select
                     value={predictionForm.zodiacSign}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const selected = zodiacs.find((z) => z.name === e.target.value);
                       setPredictionForm({
                         ...predictionForm,
                         zodiacSign: e.target.value,
-                      })
-                    }
+                        zodiacSignHindi: selected ? selected.nameHindi : predictionForm.zodiacSignHindi || "",
+                      });
+                    }}
                     className="w-full px-3 py-2 border rounded-lg"
                     required
                   >
@@ -993,12 +995,14 @@ const Horoscope = () => {
                   </label>
                   <select
                     value={predictionForm.rishiName}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const selected = rishis.find((r) => r.name === e.target.value);
                       setPredictionForm({
                         ...predictionForm,
                         rishiName: e.target.value,
-                      })
-                    }
+                        rishiNameHindi: selected ? selected.nameHindi : predictionForm.rishiNameHindi || "",
+                      });
+                    }}
                     className="w-full px-3 py-2 border rounded-lg"
                   >
                     <option value="">Select</option>

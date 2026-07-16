@@ -330,7 +330,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       submenu: [
         { name: "Home Content", href: "/dashboard/home/content" },
         { name: "Catalogue", href: "/dashboard/home/content?tab=catalogue" },
+        { name: "Media Spotlight", href: "/dashboard/home/content?tab=mediaSpotlight" },
         { name: "Member Contents", href: "/dashboard/home/member" },
+        { name: "Spiritual Stats", href: "/dashboard/home/member?tab=stats" },
       ],
     },
     {
@@ -396,7 +398,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       color: "text-green-300",
       submenu: [
         { name: "Energy Healing", href: "/dashboard/services/spells" },
-        { name: "Reading", href: "/dashboard/services/reading" },
+        { name: "Reading Services", href: "/dashboard/services/reading?tab=services" },
+        { name: "Reading Packages", href: "/dashboard/services/reading?tab=packages" },
         { name: "Spiritual Services", href: "/dashboard/services/package" },
       ],
     },
@@ -430,30 +433,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       submenu: [
         { name: "Add Testimonial", href: "/dashboard/testimonial/add" },
         { name: "View Testimonial", href: "/dashboard/testimonial/view" },
-      ],
-    },
-    {
-      name: "Reading",
-      href: "/dashboard/reading",
-      icon: <FiPackage />,
-      color: "text-teal-400",
-      submenu: [
-        {
-          name: "Reading Service",
-          href: "/dashboard/reading/readingservice",
-          submenu: [
-            { name: "Add", href: "/dashboard/reading/readingservice/add" },
-            { name: "View", href: "/dashboard/reading/readingservice/view" },
-          ],
-        },
-        {
-          name: "Reading Package",
-          href: "/dashboard/reading/readingPackage",
-          submenu: [
-            { name: "Add", href: "/dashboard/reading/readingPackage/add" },
-            { name: "View", href: "/dashboard/reading/readingPackage/view" },
-          ],
-        },
       ],
     },
     {

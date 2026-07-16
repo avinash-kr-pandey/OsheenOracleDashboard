@@ -120,6 +120,8 @@ const Home: React.FC = () => {
       const tab = params.get("tab");
       if (tab === "catalogue") {
         setActiveTab(4);
+      } else if (tab === "mediaSpotlight" || tab === "media-spotlight") {
+        setActiveTab(3);
       }
     }
   }, []);

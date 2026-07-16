@@ -87,6 +87,13 @@ const Member = () => {
   // Fetch all data
   useEffect(() => {
     fetchAllData();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab === "stats") {
+        setActiveTab(6);
+      }
+    }
   }, []);
 
   const fetchAllData = async () => {
@@ -500,6 +507,7 @@ const Member = () => {
             <DashboardContent
               dashboardStats={dashboardStats}
               applications={applications}
+              plans={plans}
             />
           </TabPanel>
 
@@ -632,7 +640,8 @@ const Member = () => {
 const DashboardContent: React.FC<{
   dashboardStats: DashboardStats | null;
   applications: MembershipApplication[];
-}> = ({ dashboardStats }) => {
+  plans: MembershipPlan[];
+}> = ({ dashboardStats, plans }) => {
   if (!dashboardStats) return null;
 
   const stats = [
@@ -667,22 +676,26 @@ const DashboardContent: React.FC<{
             </h3>
           </div>
           <div className="p-6 space-y-4">
-            {dashboardStats.plansDistribution?.map((item, idx) => (
-              <div key={idx}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">{item.plan}</span>
-                  <span className="text-gray-500">{item.count}</span>
+            {dashboardStats.plansDistribution?.map((item, idx) => {
+              const matchedPlan = plans.find(p => p._id === item.plan || p.id === item.plan);
+              const planName = matchedPlan ? matchedPlan.name : item.plan;
+              return (
+                <div key={idx}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">{planName}</span>
+                    <span className="text-gray-500">{item.count}</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div
+                      className="bg-purple-600 rounded-full h-2"
+                      style={{
+                        width: `${(item.count / (dashboardStats.totalApplications || 1)) * 100}%`,
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div
-                    className="bg-purple-600 rounded-full h-2"
-                    style={{
-                      width: `${(item.count / dashboardStats.totalApplications) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
