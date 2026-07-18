@@ -264,6 +264,57 @@ const Dashboard = () => {
     return new Intl.NumberFormat('en-IN').format(num);
   };
 
+  // Export Dashboard Report to CSV File
+  const exportReport = () => {
+    try {
+      let csvContent = "\uFEFF"; // Byte Order Mark for Excel UTF-8 support
+      
+      // 1. Report Title & Header
+      csvContent += "Osheen Oracle E-Commerce Report\r\n";
+      csvContent += `Generated On,${new Date().toLocaleString('en-IN')}\r\n\r\n`;
+      
+      // 2. Summary Dashboard Metrics
+      csvContent += "SUMMARY METRICS\r\n";
+      csvContent += "Metric,Value\r\n";
+      csvContent += `Total Revenue,${data.totalRevenue}\r\n`;
+      csvContent += `Total Orders / Bookings,${data.totalOrders}\r\n`;
+      csvContent += `Active Users Count,${data.activeUsers}\r\n`;
+      csvContent += `Customer Satisfaction Rating,${data.customerSatisfaction}\r\n\r\n`;
+      
+      // 3. Revenue Breakdown Channels
+      csvContent += "REVENUE CHANNELS BREAKDOWN\r\n";
+      csvContent += "Revenue Source,Amount\r\n";
+      csvContent += `Store Products (E-Shop),${productsDisplayRevenue}\r\n`;
+      csvContent += `Astrology Services (Consultations),${servicesDisplayRevenue}\r\n\r\n`;
+
+      // 4. Recent Transactions Table
+      csvContent += "RECENT TRANSACTIONS\r\n";
+      csvContent += "Order ID,Customer Name,Product / Service,Amount (INR),Payment Status,Date\r\n";
+      if (data.recentOrders && data.recentOrders.length > 0) {
+        data.recentOrders.forEach(o => {
+          csvContent += `"${o.id}","${o.customerName}","${o.product}",${o.amount},"${o.status.toUpperCase()}","${o.date}"\r\n`;
+        });
+      } else {
+        csvContent += "No recent transactions found.\r\n";
+      }
+      
+      // Create download blob
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Osheen_Oracle_Report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success("CSV Report downloaded successfully!");
+    } catch (err) {
+      console.error("Export report error:", err);
+      toast.error("Failed to export CSV report.");
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const s = (status || '').toLowerCase();
     switch (s) {
@@ -359,7 +410,7 @@ const Dashboard = () => {
               </div>
 
               <button
-                onClick={() => toast.success("Exporting data report...")}
+                onClick={exportReport}
                 className="px-5 py-3 bg-white text-purple-900 font-bold rounded-2xl shadow-md hover:bg-purple-50 hover:shadow-lg active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 w-full lg:w-auto"
               >
                 <Zap className="h-4 w-4 text-purple-600" />
