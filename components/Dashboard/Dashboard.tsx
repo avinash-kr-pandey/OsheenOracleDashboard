@@ -16,7 +16,8 @@ import {
   ArrowUpRight,
   Sparkles,
   ArrowDownRight,
-  BookOpen
+  BookOpen,
+  Laptop
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -467,6 +468,18 @@ const Dashboard = () => {
     return null;
   };
 
+  const totalServiceBookings = data.astrologyServices && data.astrologyServices.length > 0
+    ? data.astrologyServices.reduce((sum, s) => sum + (s.bookings || 0), 0)
+    : 1;
+
+  const servicesShareData = data.astrologyServices && data.astrologyServices.length > 0
+    ? data.astrologyServices.map((s, idx) => ({
+        name: s.service,
+        value: Math.round(((s.bookings || 0) / totalServiceBookings) * 100),
+        color: ["#8B5CF6", "#F59E0B", "#10B981", "#3B82F6", "#EF4444"][idx % 5]
+      }))
+    : [];
+
   return (
     <div className="text-slate-800 space-y-8 font-sans selection:bg-purple-500 selection:text-white">
       <Toaster position="top-right" />
@@ -571,10 +584,7 @@ const Dashboard = () => {
                 <h3 className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-rose-600 transition-colors">
                   {animatedValues.satisfaction.toFixed(1)}/5.0
                 </h3>
-                <div className="flex items-center mt-3 text-xs text-rose-600 font-bold bg-rose-50 w-fit px-2 py-1 rounded-md">
-                  <Star className="h-4 w-4 mr-1 text-rose-500 fill-rose-500" />
-                  <span>From real feedback</span>
-                </div>
+                {/* Feedback badge hidden */}
               </div>
               <div className="bg-rose-50 text-rose-600 p-3.5 rounded-xl border border-rose-100">
                 <Star className="h-6 w-6" />
@@ -690,14 +700,14 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Order Status Distribution Pie Chart */}
+          {/* Consultations Share Pie Chart */}
           <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
             <div>
               <h2 className="text-xl font-bold text-gray-950 flex items-center gap-2">
-                <Package className="h-5 w-5 text-amber-500" />
-                <span>Orders Status Share</span>
+                <Laptop className="h-5 w-5 text-amber-500" />
+                <span>Consultations Share</span>
               </h2>
-              <p className="text-xs text-gray-500 mt-1">Percentage distribution of all store transactions</p>
+              <p className="text-xs text-gray-500 mt-1">Astrology services booking distribution</p>
             </div>
 
             <div className="h-56 relative my-4">
@@ -705,35 +715,35 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={data.productCategories}
+                      data={servicesShareData}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
                       outerRadius={80}
                       paddingAngle={3}
                       dataKey="value"
-                      nameKey="category"
+                      nameKey="name"
                     >
-                      {data.productCategories.map((entry, index) => (
+                      {servicesShareData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <ChartTooltip formatter={(value) => [`${value}%`, 'Percentage']} />
+                    <ChartTooltip formatter={(value) => [`${value}%`, 'Share']} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
               <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
-                <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Share</span>
-                <span className="text-2xl font-black text-gray-900">Orders</span>
+                <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Psychic</span>
+                <span className="text-2xl font-black text-gray-900">Services</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 mt-2">
-              {data.productCategories.map((entry, idx) => (
+              {servicesShareData.slice(0, 4).map((entry, idx) => (
                 <div key={idx} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200/60">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }}></span>
-                  <span className="text-gray-700 text-xs font-semibold truncate" title={entry.category}>
-                    {entry.category} ({entry.value}%)
+                  <span className="text-gray-700 text-xs font-semibold truncate" title={entry.name}>
+                    {entry.name} ({entry.value}%)
                   </span>
                 </div>
               ))}
