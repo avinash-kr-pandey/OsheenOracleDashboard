@@ -513,7 +513,6 @@ const Dashboard = () => {
                 <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">E-Shop</span>
               </div>
               <h4 className="text-2xl font-black text-gray-900">{formatRupeesFull(productsDisplayRevenue)}</h4>
-              <p className="text-xs text-gray-500 mt-2">Physical crystals, rings, books & bracelets sales</p>
             </div>
 
             <div className="bg-slate-50 border border-slate-200/60 p-5 rounded-2xl hover:border-purple-300 transition-colors">
@@ -522,7 +521,6 @@ const Dashboard = () => {
                 <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">Readings & Spells</span>
               </div>
               <h4 className="text-2xl font-black text-gray-900">{formatRupeesFull(servicesDisplayRevenue)}</h4>
-              <p className="text-xs text-gray-500 mt-2">Tarot sessions, birth charts, forecasts bookings</p>
             </div>
 
             <div className="bg-purple-900 text-white p-5 rounded-2xl flex flex-col justify-between shadow-lg">
@@ -530,10 +528,6 @@ const Dashboard = () => {
                 <span className="text-xs font-bold text-purple-200">TOTAL CONSOLIDATED</span>
                 <h4 className="text-3xl font-black text-white mt-1">{formatRupeesFull(data.totalRevenue)}</h4>
               </div>
-              <p className="text-xs text-purple-200 mt-4 font-semibold flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Combined store channels
-              </p>
             </div>
           </div>
         </div>
