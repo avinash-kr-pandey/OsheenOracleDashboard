@@ -169,11 +169,7 @@ const AnalyticsPage = () => {
               <div>
                 <p className="text-sm text-gray-600">Total Revenue</p>
                 <h3 className="text-2xl font-bold text-gray-900 mt-2">{formatRupees(4523189)}</h3>
-                <div className="flex items-center mt-2">
-                  <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">+28.9%</span>
-                  <span className="text-sm text-gray-500 ml-2">vs last month</span>
-                </div>
+                {/* Growth indicator hidden */}
               </div>
               <div className="bg-gradient-to-r from-purple-100 to-purple-50 p-3 rounded-lg">
                 <DollarSign className="h-6 w-6 text-purple-600" />
@@ -186,11 +182,7 @@ const AnalyticsPage = () => {
               <div>
                 <p className="text-sm text-gray-600">Total Visitors</p>
                 <h3 className="text-2xl font-bold text-gray-900 mt-2">35,800</h3>
-                <div className="flex items-center mt-2">
-                  <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">+15.3%</span>
-                  <span className="text-sm text-gray-500 ml-2">vs last month</span>
-                </div>
+                {/* Growth indicator hidden */}
               </div>
               <div className="bg-gradient-to-r from-blue-100 to-blue-50 p-3 rounded-lg">
                 <Users className="h-6 w-6 text-blue-600" />
@@ -203,11 +195,7 @@ const AnalyticsPage = () => {
               <div>
                 <p className="text-sm text-gray-600">Avg. Session Duration</p>
                 <h3 className="text-2xl font-bold text-gray-900 mt-2">10:45</h3>
-                <div className="flex items-center mt-2">
-                  <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">+2.3%</span>
-                  <span className="text-sm text-gray-500 ml-2">vs last month</span>
-                </div>
+                {/* Growth indicator hidden */}
               </div>
               <div className="bg-gradient-to-r from-green-100 to-green-50 p-3 rounded-lg">
                 <Clock className="h-6 w-6 text-green-600" />
@@ -220,11 +208,7 @@ const AnalyticsPage = () => {
               <div>
                 <p className="text-sm text-gray-600">Bounce Rate</p>
                 <h3 className="text-2xl font-bold text-gray-900 mt-2">32.5%</h3>
-                <div className="flex items-center mt-2">
-                  <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
-                  <span className="text-sm text-red-600">-4.2%</span>
-                  <span className="text-sm text-gray-500 ml-2">vs last month</span>
-                </div>
+                {/* Growth indicator hidden */}
               </div>
               <div className="bg-gradient-to-r from-red-100 to-red-50 p-3 rounded-lg">
                 <Eye className="h-6 w-6 text-red-600" />
