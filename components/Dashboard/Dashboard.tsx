@@ -666,10 +666,6 @@ const Dashboard = () => {
                     />
                   </div>
                 )}
-                
-                <div className="flex items-center bg-gray-50 p-1.5 border border-gray-200 rounded-xl text-xs font-semibold hidden lg:flex">
-                  <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg">Real Data</span>
-                </div>
               </div>
             </div>
 
@@ -694,14 +690,14 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Revenue Channels Share Pie Chart */}
+          {/* Order Status Distribution Pie Chart */}
           <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
             <div>
               <h2 className="text-xl font-bold text-gray-950 flex items-center gap-2">
                 <Package className="h-5 w-5 text-amber-500" />
-                <span>Revenue Share</span>
+                <span>Orders Status Share</span>
               </h2>
-              <p className="text-xs text-gray-500 mt-1">Income distribution between Products and Services</p>
+              <p className="text-xs text-gray-500 mt-1">Percentage distribution of all store transactions</p>
             </div>
 
             <div className="h-56 relative my-4">
@@ -709,16 +705,16 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={revenueChannelsData}
+                      data={data.productCategories}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
                       outerRadius={80}
                       paddingAngle={3}
                       dataKey="value"
-                      nameKey="name"
+                      nameKey="category"
                     >
-                      {revenueChannelsData.map((entry, index) => (
+                      {data.productCategories.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -728,16 +724,16 @@ const Dashboard = () => {
               )}
               <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
                 <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Share</span>
-                <span className="text-2xl font-black text-gray-900">Revenue</span>
+                <span className="text-2xl font-black text-gray-900">Orders</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 mt-2">
-              {revenueChannelsData.map((entry, idx) => (
+              {data.productCategories.map((entry, idx) => (
                 <div key={idx} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200/60">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }}></span>
-                  <span className="text-gray-700 text-xs font-semibold truncate" title={entry.name}>
-                    {entry.name} ({entry.value}%)
+                  <span className="text-gray-700 text-xs font-semibold truncate" title={entry.category}>
+                    {entry.category} ({entry.value}%)
                   </span>
                 </div>
               ))}
