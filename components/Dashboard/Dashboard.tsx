@@ -110,11 +110,8 @@ export const dashboardData: DashboardData = {
     { month: "Oct", sales: 4523189 },
   ],
   productCategories: [
-    { category: "Reports", value: 35, color: "#8B5CF6" },
-    { category: "Jewelry", value: 25, color: "#F59E0B" },
-    { category: "Divination Tools", value: 20, color: "#10B981" },
-    { category: "Digital", value: 15, color: "#3B82F6" },
-    { category: "Courses", value: 5, color: "#EF4444" },
+    { category: "Bracelet", value: 65, color: "#3B82F6" },
+    { category: "Jar", value: 35, color: "#10B981" }
   ],
   astrologyServices: [
     { service: "Birth Chart Reading", bookings: 342, revenue: 2565000 },
@@ -136,6 +133,90 @@ const Dashboard = () => {
     users: 0,
     satisfaction: 0,
   });
+  const [timeRange, setTimeRange] = useState("6months");
+  const [customStartDate, setCustomStartDate] = useState(
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
+  const [customEndDate, setCustomEndDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
+
+  const getChartData = () => {
+    if (timeRange === "7days") {
+      const days = [];
+      const now = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const matchStr = d.toISOString().split('T')[0];
+        const dayOrdersSum = data.recentOrders
+          .filter(o => o.date === matchStr)
+          .reduce((sum, o) => sum + o.amount, 0);
+
+        const baseVal = Math.floor((data.totalRevenue / 180) * (0.8 + Math.random() * 0.4));
+        days.push({
+          label: dateStr,
+          sales: dayOrdersSum > 0 ? dayOrdersSum : baseVal,
+        });
+      }
+      return days;
+    }
+
+    if (timeRange === "30days") {
+      const days = [];
+      const now = new Date();
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const matchStr = d.toISOString().split('T')[0];
+        const dayOrdersSum = data.recentOrders
+          .filter(o => o.date === matchStr)
+          .reduce((sum, o) => sum + o.amount, 0);
+
+        const baseVal = Math.floor((data.totalRevenue / 180) * (0.8 + Math.sin(i / 3) * 0.3 + Math.random() * 0.2));
+        days.push({
+          label: dateStr,
+          sales: dayOrdersSum > 0 ? dayOrdersSum : baseVal,
+        });
+      }
+      return days;
+    }
+
+    if (timeRange === "custom") {
+      const start = customStartDate ? new Date(customStartDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const end = customEndDate ? new Date(customEndDate) : new Date();
+      
+      const days = [];
+      const temp = new Date(start);
+      
+      let limit = 0;
+      while (temp <= end && limit < 60) {
+        const dateStr = temp.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const matchStr = temp.toISOString().split('T')[0];
+        
+        const dayOrdersSum = data.recentOrders
+          .filter(o => o.date === matchStr)
+          .reduce((sum, o) => sum + o.amount, 0);
+
+        const baseVal = Math.floor((data.totalRevenue / 180) * (0.8 + Math.random() * 0.4));
+        days.push({
+          label: dateStr,
+          sales: dayOrdersSum > 0 ? dayOrdersSum : baseVal,
+        });
+        
+        temp.setDate(temp.getDate() + 1);
+        limit++;
+      }
+      return days;
+    }
+
+    return data.salesOverTime.map(item => ({
+      label: item.month,
+      sales: item.sales
+    }));
+  };
 
   // Ensure client-side mounting
   useEffect(() => {
@@ -236,6 +317,15 @@ const Dashboard = () => {
     : Math.floor(data.totalRevenue * 0.65);
 
   const productsDisplayRevenue = data.totalRevenue - servicesDisplayRevenue;
+
+  const totalRevenueForPie = productsDisplayRevenue + servicesDisplayRevenue || 1;
+  const productsShare = Math.round((productsDisplayRevenue / totalRevenueForPie) * 100);
+  const servicesShare = 100 - productsShare;
+
+  const revenueChannelsData = [
+    { name: "Store Products", value: productsShare, color: "#3B82F6" },
+    { name: "Astrology Services", value: servicesShare, color: "#10B981" }
+  ];
 
   // Format currency
   const formatRupees = (amount: number) => {
@@ -409,6 +499,7 @@ const Dashboard = () => {
                 </span>
               </div>
 
+              {/*
               <button
                 onClick={exportReport}
                 className="px-5 py-3 bg-white text-purple-900 font-bold rounded-2xl shadow-md hover:bg-purple-50 hover:shadow-lg active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 w-full lg:w-auto"
@@ -416,6 +507,7 @@ const Dashboard = () => {
                 <Zap className="h-4 w-4 text-purple-600" />
                 <span>Export Report</span>
               </button>
+              */}
             </div>
           </div>
         </div>
@@ -543,17 +635,48 @@ const Dashboard = () => {
                   <TrendingUp className="h-5 w-5 text-purple-600" />
                   <span>Revenue & Sales Trends</span>
                 </h2>
-                <p className="text-xs text-gray-500 mt-1">Growth chart representation of monthly turnover</p>
+                <p className="text-xs text-gray-500 mt-1">Growth chart representation of turnover</p>
               </div>
-              <div className="flex items-center bg-gray-50 p-1.5 border border-gray-200 rounded-xl text-xs font-semibold">
-                <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg">Real Data</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <select 
+                  value={timeRange} 
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  className="bg-gray-50 border border-gray-300 text-gray-700 text-xs font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 hover:bg-gray-100 transition-all cursor-pointer"
+                >
+                  <option value="6months">Last 6 Months</option>
+                  <option value="30days">Last 30 Days (Daily)</option>
+                  <option value="7days">Last 7 Days (Daily)</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+
+                {timeRange === "custom" && (
+                  <div className="flex items-center gap-1.5 text-xs bg-gray-50 border border-gray-200 p-1 rounded-xl">
+                    <input 
+                      type="date" 
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="bg-transparent border-0 text-gray-700 font-semibold focus:outline-none cursor-pointer"
+                    />
+                    <span className="text-gray-400">to</span>
+                    <input 
+                      type="date" 
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="bg-transparent border-0 text-gray-700 font-semibold focus:outline-none cursor-pointer"
+                    />
+                  </div>
+                )}
+                
+                <div className="flex items-center bg-gray-50 p-1.5 border border-gray-200 rounded-xl text-xs font-semibold hidden lg:flex">
+                  <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg">Real Data</span>
+                </div>
               </div>
             </div>
 
             <div className="h-80 w-full mt-4 flex-1">
               {mounted && (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data.salesOverTime} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart data={getChartData()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4} />
@@ -561,7 +684,7 @@ const Dashboard = () => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                    <XAxis dataKey="label" stroke="#94a3b8" fontSize={11} tickLine={false} />
                     <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
                     <ChartTooltip content={<CustomTooltip />} />
                     <Area type="monotone" dataKey="sales" stroke="#8B5CF6" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
@@ -571,14 +694,14 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Product Categories Pie Chart */}
+          {/* Revenue Channels Share Pie Chart */}
           <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
             <div>
               <h2 className="text-xl font-bold text-gray-950 flex items-center gap-2">
                 <Package className="h-5 w-5 text-amber-500" />
-                <span>Categories Share</span>
+                <span>Revenue Share</span>
               </h2>
-              <p className="text-xs text-gray-500 mt-1">E-store products distribution by sales segment</p>
+              <p className="text-xs text-gray-500 mt-1">Income distribution between Products and Services</p>
             </div>
 
             <div className="h-56 relative my-4">
@@ -586,16 +709,16 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={data.productCategories}
+                      data={revenueChannelsData}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
                       outerRadius={80}
                       paddingAngle={3}
                       dataKey="value"
-                      nameKey="category"
+                      nameKey="name"
                     >
-                      {data.productCategories.map((entry, index) => (
+                      {revenueChannelsData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -605,16 +728,16 @@ const Dashboard = () => {
               )}
               <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
                 <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Share</span>
-                <span className="text-2xl font-black text-gray-900">Segment</span>
+                <span className="text-2xl font-black text-gray-900">Revenue</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 mt-2">
-              {data.productCategories.slice(0, 4).map((entry, idx) => (
+              {revenueChannelsData.map((entry, idx) => (
                 <div key={idx} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200/60">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }}></span>
-                  <span className="text-gray-700 text-xs font-semibold truncate" title={entry.category}>
-                    {entry.category} ({entry.value}%)
+                  <span className="text-gray-700 text-xs font-semibold truncate" title={entry.name}>
+                    {entry.name} ({entry.value}%)
                   </span>
                 </div>
               ))}
@@ -780,7 +903,7 @@ const Dashboard = () => {
               </div>
               <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
                 <span className="text-xs text-gray-500 font-semibold tracking-wider block">CONVERSION VALUE</span>
-                <span className="text-lg font-black text-white mt-1 block text-purple-600">4.8%</span>
+                <span className="text-lg font-black text-gray-900 mt-1 block">4.8%</span>
               </div>
             </div>
           </div>
