@@ -431,10 +431,7 @@ const Dashboard = () => {
                 <h3 className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-purple-600 transition-colors">
                   {formatRupees(animatedValues.revenue)}
                 </h3>
-                <div className="flex items-center mt-3 text-xs text-emerald-600 font-bold bg-emerald-50 w-fit px-2 py-1 rounded-md">
-                  <ArrowUpRight className="h-4.5 w-4.5 mr-1" />
-                  <span>+12.5% vs last month</span>
-                </div>
+                {/* Growth indicator hidden */}
               </div>
               <div className="bg-purple-50 text-purple-600 p-3.5 rounded-xl border border-purple-100">
                 <IndianRupee className="h-6 w-6" />
@@ -450,10 +447,7 @@ const Dashboard = () => {
                 <h3 className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-amber-600 transition-colors">
                   {formatIndianNumber(animatedValues.orders)}
                 </h3>
-                <div className="flex items-center mt-3 text-xs text-emerald-600 font-bold bg-emerald-50 w-fit px-2 py-1 rounded-md">
-                  <ArrowUpRight className="h-4.5 w-4.5 mr-1" />
-                  <span>+8.2% vs last month</span>
-                </div>
+                {/* Growth indicator hidden */}
               </div>
               <div className="bg-amber-50 text-amber-600 p-3.5 rounded-xl border border-amber-100">
                 <ShoppingCart className="h-6 w-6" />
@@ -469,10 +463,7 @@ const Dashboard = () => {
                 <h3 className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-blue-600 transition-colors">
                   {formatIndianNumber(animatedValues.users)}
                 </h3>
-                <div className="flex items-center mt-3 text-xs text-emerald-600 font-bold bg-emerald-50 w-fit px-2 py-1 rounded-md">
-                  <ArrowUpRight className="h-4.5 w-4.5 mr-1" />
-                  <span>+15.3% vs last month</span>
-                </div>
+                {/* Growth indicator hidden */}
               </div>
               <div className="bg-blue-50 text-blue-600 p-3.5 rounded-xl border border-blue-100">
                 <Users className="h-6 w-6" />

@@ -335,12 +335,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: "Spiritual Stats", href: "/dashboard/home/member?tab=stats" },
       ],
     },
-    {
-      name: "Analytics",
-      href: "/dashboard/analytics",
-      icon: <FiBarChart2 />,
-      color: "text-purple-400",
-    },
+    // {
+    //   name: "Analytics",
+    //   href: "/dashboard/analytics",
+    //   icon: <FiBarChart2 />,
+    //   color: "text-purple-400",
+    // },
     {
       name: "Users",
       href: "/dashboard/users",
