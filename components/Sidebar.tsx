@@ -420,7 +420,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       color: "text-pink-300",
     },
     {
-      name: "Horoscope Main",
+      name: "Horoscope",
       href: "/dashboard/horoscopemain",
       icon: <FiStar />,
       color: "text-purple-300",
