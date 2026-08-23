@@ -8,7 +8,8 @@ import {
   subcategoryAPI,
   uploadFile,
 } from "@/utils/services.package.api";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -901,10 +902,22 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
 
 // ==================== MAIN COMPONENT ====================
 
-const Package: React.FC = () => {
+const PackageContent: React.FC = () => {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<ActiveTab>("categories");
+
+  useEffect(() => {
+    if (tab === "requests" || tab === "categories" || tab === "stats") {
+      setActiveTab(tab as ActiveTab);
+    } else {
+      setActiveTab("categories");
+    }
+  }, [tab]);
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [selectedStatusTab, setSelectedStatusTab] = useState<string>("all");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
@@ -1300,21 +1313,58 @@ const Package: React.FC = () => {
               </div>
             </div>
 
+            {/* Status Sub-tabs */}
+            <div className="flex gap-2 mb-6 border-b border-gray-200 pb-px overflow-x-auto">
+              {[
+                { id: "all", label: "All Bookings", count: requests.length, color: "border-purple-600 text-purple-600" },
+                { id: "pending", label: "Pending", count: requests.filter(r => r.status === "pending").length, color: "border-yellow-500 text-yellow-600" },
+                { id: "confirmed", label: "Confirmed", count: requests.filter(r => r.status === "confirmed").length, color: "border-blue-500 text-blue-600" },
+                { id: "in_progress", label: "In Progress", count: requests.filter(r => r.status === "in_progress").length, color: "border-purple-500 text-purple-600" },
+                { id: "completed", label: "Completed", count: requests.filter(r => r.status === "completed").length, color: "border-green-500 text-green-600" },
+                { id: "cancelled", label: "Cancelled", count: requests.filter(r => r.status === "cancelled").length, color: "border-red-500 text-red-600" }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setSelectedStatusTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 font-medium text-sm border-b-2 transition-all whitespace-nowrap ${
+                    selectedStatusTab === tab.id
+                      ? tab.color + " font-semibold bg-purple-50/10"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  {tab.label}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    selectedStatusTab === tab.id
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
             {loading ? (
               <div className="text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
               </div>
-            ) : requests.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-2xl">
-                <div className="text-6xl mb-4">📋</div>
-                <p className="text-gray-500">No service requests yet.</p>
-              </div>
-            ) : (
-              <RequestTable
-                requests={requests}
-                onViewDetails={handleViewDetails}
-              />
-            )}
+            ) : (() => {
+              const filteredRequests = selectedStatusTab === "all"
+                ? requests
+                : requests.filter(r => r.status === selectedStatusTab);
+
+              return filteredRequests.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                  <div className="text-6xl mb-4">📋</div>
+                  <p className="text-gray-500">No {selectedStatusTab !== "all" ? selectedStatusTab.replace("_", " ") : ""} bookings found.</p>
+                </div>
+              ) : (
+                <RequestTable
+                  requests={filteredRequests}
+                  onViewDetails={handleViewDetails}
+                />
+              );
+            })()}
           </div>
         )}
 
@@ -1766,6 +1816,18 @@ const Package: React.FC = () => {
         onStatusUpdate={handleUpdateRequestStatus}
       />
     </div>
+  );
+};
+
+const Package: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    }>
+      <PackageContent />
+    </Suspense>
   );
 };
 

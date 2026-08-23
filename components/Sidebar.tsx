@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
 import {
   FiChevronDown,
   FiChevronRight,
@@ -17,6 +17,7 @@ import {
   FiLogOut,
   FiPhone,
   FiBell,
+  FiCalendar,
 } from "react-icons/fi";
 import { fetchData, setAuthToken } from "@/utils/api";
 
@@ -310,9 +311,11 @@ function ProfileModal({ user, isOpen, onClose, onLogout }: ProfileModalProps) {
 
 // ==================== Main Sidebar Component ====================
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+function SidebarContent({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [openSubDropdown, setOpenSubDropdown] = useState<string | null>(null);
@@ -392,6 +395,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       color: "text-orange-400",
     },
     {
+      name: "Book a Session",
+      href: "/dashboard/sessions",
+      icon: <FiCalendar />,
+      color: "text-teal-400",
+    },
+    {
       name: "Services",
       href: "/dashboard/services",
       icon: <FiUsers />,
@@ -444,13 +453,43 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   ];
 
   const isActive = (item: NavItem): boolean => {
-    if (pathname === item.href) return true;
+    // Helper to extract path and tab from a href string
+    const parseHref = (href: string) => {
+      const parts = href.split("?");
+      const path = parts[0];
+      const tabParam = parts[1] ? new URLSearchParams(parts[1]).get("tab") : null;
+      return { path, tabParam };
+    };
+
+    const itemInfo = parseHref(item.href);
+
+    if (pathname === itemInfo.path) {
+      if (itemInfo.tabParam) {
+        return currentTab === itemInfo.tabParam;
+      }
+      return !currentTab;
+    }
 
     if (item.submenu) {
       const hasActiveSubmenu = item.submenu.some((sub) => {
-        if (pathname === sub.href) return true;
+        const subInfo = parseHref(sub.href);
+        if (pathname === subInfo.path) {
+          if (subInfo.tabParam) {
+            return currentTab === subInfo.tabParam;
+          }
+          return !currentTab;
+        }
         if (sub.submenu) {
-          return sub.submenu.some((child) => pathname === child.href);
+          return sub.submenu.some((child) => {
+            const childInfo = parseHref(child.href);
+            if (pathname === childInfo.path) {
+              if (childInfo.tabParam) {
+                return currentTab === childInfo.tabParam;
+              }
+              return !currentTab;
+            }
+            return false;
+          });
         }
         return false;
       });
@@ -804,5 +843,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         }
       `}</style>
     </>
+  );
+}
+
+export default function Sidebar(props: SidebarProps) {
+  return (
+    <Suspense fallback={null}>
+      <SidebarContent {...props} />
+    </Suspense>
   );
 }
