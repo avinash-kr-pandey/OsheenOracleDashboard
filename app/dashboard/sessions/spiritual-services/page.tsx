@@ -198,46 +198,32 @@ const SpiritualServicesContent = () => {
                 card.isActive ? "border-gray-100 hover:border-purple-200" : "border-red-200 bg-red-50/20"
               }`}
             >
-              {/* Card Header & Image */}
-              <div>
-                <div className="relative h-48 w-full bg-gray-100">
-                  {card.image ? (
-                    <img
-                      src={card.image}
-                      alt={card.name}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
-                  )}
-                  {!card.isActive && (
-                    <span className="absolute top-3 right-3 px-2.5 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
-                      Inactive
-                    </span>
-                  )}
-                </div>
+              {/* Card Header & Content */}
+              <div className="p-5 relative flex-grow">
+                {!card.isActive && (
+                  <span className="absolute top-5 right-5 px-2.5 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
+                    Inactive
+                  </span>
+                )}
+                <h3 className="text-xl font-bold text-gray-800 mb-1 pr-16">{card.name}</h3>
+                <div className="text-purple-600 font-bold text-lg mb-3">₹{card.price}</div>
+                <p className="text-gray-600 text-sm line-clamp-3 mb-4 leading-relaxed">
+                  {card.description}
+                </p>
 
-                <div className="p-5">
-                  <h3 className="text-xl font-bold text-gray-800 mb-1">{card.name}</h3>
-                  <div className="text-purple-600 font-bold text-lg mb-3">₹{card.price}</div>
-                  <p className="text-gray-600 text-sm line-clamp-3 mb-4 leading-relaxed">
-                    {card.description}
-                  </p>
-
-                  {/* Highlights */}
-                  {card.traits && card.traits.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {card.traits.map((trait, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded-md text-[10px] font-semibold"
-                        >
-                          {trait}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* Highlights */}
+                {card.traits && card.traits.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {card.traits.map((trait, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded-md text-[10px] font-semibold"
+                      >
+                        {trait}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Card Actions */}
@@ -311,25 +297,6 @@ const SpiritualServicesContent = () => {
                   placeholder="Describe what the customer gets in this session..."
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-gray-800 text-sm outline-none focus:ring-2 focus:ring-purple-500"
                 />
-              </div>
-
-              {/* Image Upload */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Card Image</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    name="image"
-                    value={formData.image}
-                    onChange={handleInputChange}
-                    placeholder="Upload image or paste image URL..."
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-800 text-sm outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                  <label className="cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold px-4 py-2.5 rounded-xl text-sm border border-purple-200 transition">
-                    Upload
-                    <input type="file" onChange={handleImageUpload} className="hidden" accept="image/*" />
-                  </label>
-                </div>
               </div>
 
               {/* Dynamic Benefits Lists */}
