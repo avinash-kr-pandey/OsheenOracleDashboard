@@ -399,6 +399,10 @@ function SidebarContent({ isOpen, onClose }: SidebarProps) {
       href: "/dashboard/sessions",
       icon: <FiCalendar />,
       color: "text-teal-400",
+      submenu: [
+        { name: "Session Bookings", href: "/dashboard/sessions" },
+        { name: "Spiritual Bookings", href: "/dashboard/sessions/spiritual-services" },
+      ],
     },
     {
       name: "Services",
