@@ -156,6 +156,7 @@ export const membershipAdminApi = {
     page?: number;
     limit?: number;
     search?: string;
+    expiringSoon?: string;
   }): Promise<ApiResponse<MembershipApplication[]>> => {
     try {
       const queryParams = new URLSearchParams();
@@ -166,6 +167,7 @@ export const membershipAdminApi = {
       if (params?.page) queryParams.append("page", params.page.toString());
       if (params?.limit) queryParams.append("limit", params.limit.toString());
       if (params?.search) queryParams.append("search", params.search);
+      if (params?.expiringSoon) queryParams.append("expiringSoon", params.expiringSoon);
 
       const endpoint = `/becomeamember/admin/applications${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
       return await fetchData<ApiResponse<MembershipApplication[]>>(endpoint);

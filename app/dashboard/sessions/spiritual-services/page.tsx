@@ -91,9 +91,10 @@ const SpiritualServicesContent = () => {
     const file = e.target.files[0];
     try {
       toast.loading("Uploading image...");
-      const response = await uploadFile(file);
-      if (response && response.success && response.fileUrl) {
-        setFormData((prev) => ({ ...prev, image: response.fileUrl }));
+      const response: any = await uploadFile(file);
+      const url = typeof response === "string" ? response : response?.fileUrl;
+      if (url) {
+        setFormData((prev) => ({ ...prev, image: url }));
         toast.dismiss();
         toast.success("Image uploaded successfully!");
       } else {

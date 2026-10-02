@@ -454,6 +454,12 @@ function SidebarContent({ isOpen, onClose }: SidebarProps) {
       icon: <FiSettings />,
       color: "text-blue-300",
     },
+    {
+      name: "Membership",
+      href: "/dashboard/membership",
+      icon: <FiUsers />,
+      color: "text-purple-400",
+    },
   ];
 
   const isActive = (item: NavItem): boolean => {
