@@ -235,15 +235,22 @@ const Dashboard = () => {
         }
       } catch (error: any) {
         console.error("Error fetching dashboard statistics:", error);
+        localStorage.removeItem("token");
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("user");
+        sessionStorage.clear();
+
         if (error.response?.status === 401) {
-          toast.error("Please login to view dashboard");
-          router.push("/login");
+          toast.error("Session expired. Please login again.");
         } else if (error.response?.status === 403) {
           toast.error("Access denied. Admin privileges required.");
-          router.push("/login");
         } else {
-          toast.error("Offline or unable to connect. Showing fallback data.");
+          toast.error("Unable to connect to server. Redirecting to login...");
         }
+
+        setTimeout(() => {
+          window.location.replace("/login");
+        }, 1000);
       } finally {
         setLoading(false);
       }
