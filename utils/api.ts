@@ -77,9 +77,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
         const currentPath = window.location.pathname;
-        if (currentPath !== "/login" && !currentPath.includes("/admin")) {
+        if (currentPath !== "/login") {
           localStorage.removeItem("token");
+          localStorage.removeItem("authToken");
           localStorage.removeItem("user");
+          sessionStorage.clear();
           window.location.replace("/login");
         }
       }

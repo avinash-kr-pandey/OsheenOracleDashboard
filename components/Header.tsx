@@ -57,6 +57,28 @@ const Header = ({ onMenuClick }: HeaderProps) => {
 
   // Fetch user data on component mount
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          setUserData({
+            _id: parsed._id || parsed.id || "",
+            id: parsed._id || parsed.id || "",
+            name: parsed.name || "User",
+            email: parsed.email || "",
+            role: parsed.role || parsed.type || "admin",
+            type: parsed.type || parsed.role || "admin",
+            createdAt: parsed.createdAt || new Date().toISOString(),
+            updatedAt: parsed.updatedAt || new Date().toISOString(),
+            isVerified: true,
+            avatar: parsed.avatar,
+          });
+        } catch (e) {
+          console.error("Failed to parse stored user:", e);
+        }
+      }
+    }
     fetchUserProfile();
   }, []);
 
@@ -85,8 +107,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
         };
 
         setUserData(userInfo);
-      } else {
-        throw new Error("Invalid response structure");
       }
     } catch (error: unknown) {
       console.error("Failed to fetch user profile:", error);
@@ -94,6 +114,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
 
       if (axiosError?.response?.status === 401) {
         localStorage.clear();
+        sessionStorage.clear();
         window.location.replace("/login");
       }
     } finally {
@@ -268,7 +289,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             </button>
 
             {/* User Menu Dropdown */}
-            {showUserMenu && !loading && userData && (
+            {showUserMenu && (
               <>
                 <div
                   className="fixed inset-0 z-30"
@@ -294,9 +315,11 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                           <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-full">
                             {getDisplayRole()}
                           </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-500">
-                            • Joined {getYearFromDate(userData.createdAt)}
-                          </span>
+                          {userData?.createdAt && (
+                            <span className="text-xs text-gray-500 dark:text-gray-500">
+                              • Joined {getYearFromDate(userData.createdAt)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -318,7 +341,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                       </div>
                     </a>
 
-                    {userData.phone && (
+                    {userData?.phone && (
                       <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
                         <p className="font-medium mb-1">Contact Info</p>
                         <p className="truncate">{userData.phone}</p>
