@@ -9,9 +9,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <title>Osheen Oracle | Admin Dashboard</title>
         <meta name="description" content="Osheen Oracle Admin Management Portal" />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/icon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
+        <link rel="icon" href="/icon.png?v=2" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.ico?v=2" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
       </head>
       <body>
         <AuthProvider>
